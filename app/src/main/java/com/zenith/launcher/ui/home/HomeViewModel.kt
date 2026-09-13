@@ -3,6 +3,7 @@ package com.zenith.launcher.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zenith.launcher.data.model.AppInfo
+import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ChapterItem
 import com.zenith.launcher.data.model.ChapterStatus
 import com.zenith.launcher.data.model.ExamSettings
@@ -27,12 +28,14 @@ data class HomeUiState(
     val greeting: String = "",
     val apps: List<AppInfo> = emptyList(),
     val widgetVisibility: WidgetVisibility = WidgetVisibility(),
+    val widgetOrder: List<String> = emptyList(),
     val jeeMainDaysLeft: Long? = null,
     val jeeAdvancedDaysLeft: Long? = null,
     val todoItems: List<TodoItem> = emptyList(),
     val chapterItems: List<ChapterItem> = emptyList(),
     val pdfLinks: List<PdfLink> = emptyList(),
     val isFocusModeActive: Boolean = false,
+    val background: BackgroundSettings = BackgroundSettings(),
     val isLoadingApps: Boolean = true
 )
 
@@ -62,18 +65,30 @@ class HomeViewModel(
         val name: String,
         val exam: ExamSettings,
         val visibility: WidgetVisibility,
+        val order: List<String>,
         val focusActive: Boolean,
-        val blockedApps: Set<String>
+        val allowedApps: Set<String>,
+        val background: BackgroundSettings
     )
 
     private val baseState = combine(
         settingsRepository.profileName,
         settingsRepository.examSettings,
         settingsRepository.widgetVisibility,
+        settingsRepository.widgetOrder,
         settingsRepository.focusModeActive,
-        settingsRepository.focusBlockedApps
-    ) { name, exam, visibility, focusActive, blockedApps ->
-        BaseSettings(name, exam, visibility, focusActive, blockedApps)
+        settingsRepository.focusAllowedApps,
+        settingsRepository.backgroundSettings
+    ) { array ->
+        BaseSettings(
+            name = array[0] as String,
+            exam = array[1] as ExamSettings,
+            visibility = array[2] as WidgetVisibility,
+            order = array[3] as List<String>,
+            focusActive = array[4] as Boolean,
+            allowedApps = array[5] as Set<String>,
+            background = array[6] as BackgroundSettings
+        )
     }
 
     val uiState: StateFlow<HomeUiState> = combine(
@@ -91,18 +106,21 @@ class HomeViewModel(
         val chapters = array[4] as List<ChapterItem>
         val pdfs = array[5] as List<PdfLink>
 
-        val visibleApps = if (base.focusActive) apps.filterNot { it.packageName in base.blockedApps } else apps
+        // Focus Mode is an ALLOW-list: when active, only explicitly-allowed apps show up.
+        val visibleApps = if (base.focusActive) apps.filter { it.packageName in base.allowedApps } else apps
 
         HomeUiState(
             greeting = buildGreeting(base.name),
             apps = visibleApps,
             widgetVisibility = base.visibility,
+            widgetOrder = base.order,
             jeeMainDaysLeft = base.exam.jeeMainDateMillis?.let { CountdownUtil.daysRemaining(it) },
             jeeAdvancedDaysLeft = base.exam.jeeAdvancedDateMillis?.let { CountdownUtil.daysRemaining(it) },
             todoItems = todos,
             chapterItems = chapters,
             pdfLinks = pdfs,
             isFocusModeActive = base.focusActive,
+            background = base.background,
             isLoadingApps = loading
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
@@ -119,6 +137,16 @@ class HomeViewModel(
     // ---------- Focus mode ----------
     fun toggleFocusMode() = viewModelScope.launch {
         settingsRepository.setFocusModeActive(!uiState.value.isFocusModeActive)
+    }
+
+    // ---------- Widget drag-to-reorder ----------
+    /** Moves the widget at [from] to sit at [to] within the current order, then persists it. */
+    fun moveWidget(from: Int, to: Int) {
+        val current = uiState.value.widgetOrder.toMutableList()
+        if (from !in current.indices || to !in current.indices) return
+        val moved = current.removeAt(from)
+        current.add(to, moved)
+        viewModelScope.launch { settingsRepository.setWidgetOrder(current) }
     }
 
     // ---------- Daily to-do ----------

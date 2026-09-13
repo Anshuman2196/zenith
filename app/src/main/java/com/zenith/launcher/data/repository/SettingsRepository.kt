@@ -1,6 +1,7 @@
 package com.zenith.launcher.data.repository
 
 import com.zenith.launcher.data.local.PreferencesManager
+import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ChapterItem
 import com.zenith.launcher.data.model.ExamSettings
 import com.zenith.launcher.data.model.PdfLink
@@ -30,6 +31,9 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     val widgetVisibility: Flow<WidgetVisibility> = prefs.widgetVisibility
     suspend fun setWidgetVisibility(visibility: WidgetVisibility) = prefs.setWidgetVisibility(visibility)
 
+    val widgetOrder: Flow<List<String>> = prefs.widgetOrder
+    suspend fun setWidgetOrder(order: List<String>) = prefs.setWidgetOrder(order)
+
     val todoList: Flow<List<TodoItem>> = prefs.todoList
     suspend fun setTodoList(items: List<TodoItem>) = prefs.setTodoList(items)
 
@@ -42,6 +46,11 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     val focusModeActive: Flow<Boolean> = prefs.focusModeActive
     suspend fun setFocusModeActive(active: Boolean) = prefs.setFocusModeActive(active)
 
-    val focusBlockedApps: Flow<Set<String>> = prefs.focusBlockedApps
-    suspend fun setFocusBlockedApps(packages: Set<String>) = prefs.setFocusBlockedApps(packages)
+    val focusAllowedApps: Flow<Set<String>> = prefs.focusAllowedApps
+    suspend fun setFocusAllowedApps(packages: Set<String>) = prefs.setFocusAllowedApps(packages)
+
+    val backgroundSettings: Flow<BackgroundSettings> = prefs.backgroundSettings
+    suspend fun setBackgroundImageUri(uriString: String?) = prefs.setBackgroundImageUri(uriString)
+    suspend fun setBackgroundColor(argb: Long?) = prefs.setBackgroundColor(argb)
+    suspend fun clearBackground() = prefs.clearBackground()
 }

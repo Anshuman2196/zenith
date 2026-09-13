@@ -18,6 +18,12 @@ fun WidgetVisibilitySection(
     onChange: ((WidgetVisibility) -> WidgetVisibility) -> Unit
 ) {
     SettingsSectionCard(title = "Widget Visibility") {
+        Text(
+            "Tip: on the Home screen, hold and drag any widget to reorder it.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        ToggleRow("Clock", visibility.clockEnabled) { checked -> onChange { it.copy(clockEnabled = checked) } }
         ToggleRow("Exam Countdown", visibility.countdownEnabled) { checked -> onChange { it.copy(countdownEnabled = checked) } }
         ToggleRow("Study Timer / Pomodoro", visibility.pomodoroEnabled) { checked -> onChange { it.copy(pomodoroEnabled = checked) } }
         ToggleRow("Daily To-Do List", visibility.todoEnabled) { checked -> onChange { it.copy(todoEnabled = checked) } }

@@ -16,18 +16,20 @@ import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.AppInfo
 
 /**
- * Focus Mode App Picker: choose which apps count as "distracting" and get hidden from the
- * Home screen grid whenever Focus Mode is switched on.
+ * Focus Mode App Picker: choose which apps are ALLOWED to stay visible while Focus Mode is on.
+ * Everything left unchecked is hidden from the app drawer/grid the moment Focus Mode switches on
+ * - an allow-list, so distraction-free by default rather than needing to hide every distraction
+ * one by one.
  */
 @Composable
 fun FocusModeAppsSection(
     apps: List<AppInfo>,
-    blockedPackages: Set<String>,
+    allowedPackages: Set<String>,
     onToggleApp: (String) -> Unit
 ) {
-    SettingsSectionCard(title = "Focus Mode - Blocked Apps") {
+    SettingsSectionCard(title = "Focus Mode - Allowed Apps") {
         Text(
-            "Pick the apps you want hidden while Focus Mode is on (e.g. social media, games).",
+            "Pick the apps you want to stay usable while Focus Mode is on (e.g. calculator, notes). Everything else is hidden.",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -40,7 +42,7 @@ fun FocusModeAppsSection(
                 ) {
                     Text(app.label, style = MaterialTheme.typography.bodyMedium)
                     Checkbox(
-                        checked = app.packageName in blockedPackages,
+                        checked = app.packageName in allowedPackages,
                         onCheckedChange = { onToggleApp(app.packageName) }
                     )
                 }

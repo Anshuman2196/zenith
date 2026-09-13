@@ -15,13 +15,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/** Top header: aspirant's name + gear icon entry point into Settings. */
+/** Top header: aspirant's name, a live clock + date, and the gear icon into Settings. */
 @Composable
 fun GreetingHeader(greeting: String, onSettingsClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 24.dp),
+            .padding(top = 24.dp, start = 20.dp, end = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -31,6 +31,7 @@ fun GreetingHeader(greeting: String, onSettingsClick: () -> Unit) {
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.weight(1f)
         )
+        InlineClock()
         IconButton(onClick = onSettingsClick) {
             Icon(
                 imageVector = Icons.Default.Settings,

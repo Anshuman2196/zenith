@@ -12,9 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
 /**
- * Widget 6: Focus Mode Toggle.
- * When ON, HomeViewModel filters the app grid to hide every package the user marked as
- * "distracting" in Settings > Focus Mode App Picker.
+ * Widget: Focus Mode Toggle.
+ * When ON, HomeViewModel filters the app drawer/app grid down to ONLY the apps the user
+ * explicitly allowed in Settings > Focus Mode App Picker (an allow-list, not a block-list).
  */
 @Composable
 fun FocusModeToggle(isActive: Boolean, onToggle: () -> Unit) {
@@ -27,7 +27,7 @@ fun FocusModeToggle(isActive: Boolean, onToggle: () -> Unit) {
             Column {
                 Text("Focus Mode", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = if (isActive) "Distracting apps are hidden" else "All apps visible",
+                    text = if (isActive) "Only allowed apps are visible" else "All apps visible",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

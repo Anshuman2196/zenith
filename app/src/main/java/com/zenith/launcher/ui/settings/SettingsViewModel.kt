@@ -3,6 +3,7 @@ package com.zenith.launcher.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zenith.launcher.data.model.AppInfo
+import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ExamSettings
 import com.zenith.launcher.data.model.IconPackInfo
 import com.zenith.launcher.data.model.WidgetVisibility
@@ -24,7 +25,8 @@ data class SettingsUiState(
     val selectedIconPack: String? = null,
     val widgetVisibility: WidgetVisibility = WidgetVisibility(),
     val installedApps: List<AppInfo> = emptyList(), // used by the Focus Mode app picker
-    val focusBlockedApps: Set<String> = emptySet()
+    val focusAllowedApps: Set<String> = emptySet(),
+    val background: BackgroundSettings = BackgroundSettings()
 )
 
 class SettingsViewModel(
@@ -53,7 +55,8 @@ class SettingsViewModel(
         settingsRepository.iconPackPackage,
         settingsRepository.widgetVisibility,
         _installedApps,
-        settingsRepository.focusBlockedApps
+        settingsRepository.focusAllowedApps,
+        settingsRepository.backgroundSettings
     ) { array ->
         SettingsUiState(
             profileName = array[0] as String,
@@ -63,7 +66,8 @@ class SettingsViewModel(
             selectedIconPack = array[4] as String?,
             widgetVisibility = array[5] as WidgetVisibility,
             installedApps = array[6] as List<AppInfo>,
-            focusBlockedApps = array[7] as Set<String>
+            focusAllowedApps = array[7] as Set<String>,
+            background = array[8] as BackgroundSettings
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
 
@@ -85,10 +89,21 @@ class SettingsViewModel(
         settingsRepository.setWidgetVisibility(update(uiState.value.widgetVisibility))
     }
 
-    // ---------- Focus mode blocklist ----------
-    fun toggleFocusBlockedApp(packageName: String) = viewModelScope.launch {
-        val current = uiState.value.focusBlockedApps
+    // ---------- Focus mode allow-list ----------
+    fun toggleFocusAllowedApp(packageName: String) = viewModelScope.launch {
+        val current = uiState.value.focusAllowedApps
         val updated = if (packageName in current) current - packageName else current + packageName
-        settingsRepository.setFocusBlockedApps(updated)
+        settingsRepository.setFocusAllowedApps(updated)
     }
+
+    // ---------- Background customization ----------
+    fun setBackgroundImage(uriString: String?) = viewModelScope.launch {
+        settingsRepository.setBackgroundImageUri(uriString)
+    }
+
+    fun setBackgroundColor(argb: Long?) = viewModelScope.launch {
+        settingsRepository.setBackgroundColor(argb)
+    }
+
+    fun resetBackground() = viewModelScope.launch { settingsRepository.clearBackground() }
 }

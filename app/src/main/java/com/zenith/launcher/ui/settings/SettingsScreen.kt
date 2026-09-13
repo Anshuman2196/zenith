@@ -18,6 +18,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.zenith.launcher.ui.settings.components.BackgroundSettingsSection
 import com.zenith.launcher.ui.settings.components.ExamSettingsSection
 import com.zenith.launcher.ui.settings.components.FocusModeAppsSection
 import com.zenith.launcher.ui.settings.components.IconPackPickerSection
@@ -75,13 +76,21 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 )
             }
             item {
+                BackgroundSettingsSection(
+                    background = state.background,
+                    onPickImage = viewModel::setBackgroundImage,
+                    onPickColor = viewModel::setBackgroundColor,
+                    onReset = viewModel::resetBackground
+                )
+            }
+            item {
                 WidgetVisibilitySection(visibility = state.widgetVisibility, onChange = viewModel::setWidgetVisibility)
             }
             item {
                 FocusModeAppsSection(
                     apps = state.installedApps,
-                    blockedPackages = state.focusBlockedApps,
-                    onToggleApp = viewModel::toggleFocusBlockedApp
+                    allowedPackages = state.focusAllowedApps,
+                    onToggleApp = viewModel::toggleFocusAllowedApp
                 )
             }
         }

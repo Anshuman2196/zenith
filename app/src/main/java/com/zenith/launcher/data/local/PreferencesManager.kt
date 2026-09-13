@@ -6,10 +6,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ChapterItem
 import com.zenith.launcher.data.model.ExamSettings
 import com.zenith.launcher.data.model.PdfLink
 import com.zenith.launcher.data.model.TodoItem
+import com.zenith.launcher.data.model.WidgetIds
 import com.zenith.launcher.data.model.WidgetVisibility
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -24,8 +26,8 @@ private val Context.dataStore by preferencesDataStore(name = "launcher_settings"
  * Central read/write point for every persisted launcher setting. Each setting is exposed as a
  * Flow so ViewModels collect it reactively and the UI recomposes automatically on change.
  *
- * Lists (todos/chapters/pdf links/blocked apps) are stored as a single JSON string per key,
- * since DataStore Preferences only supports primitive types natively.
+ * Lists (todos/chapters/pdf links/allowed apps/widget order) are stored as a single JSON string
+ * per key, since DataStore Preferences only supports primitive types natively.
  */
 class PreferencesManager(private val context: Context) {
 
@@ -38,11 +40,16 @@ class PreferencesManager(private val context: Context) {
         val DARK_MODE = booleanPreferencesKey("dark_mode")
         val ICON_PACK_PACKAGE = stringPreferencesKey("icon_pack_package")
         val WIDGET_VISIBILITY = stringPreferencesKey("widget_visibility_json")
+        val WIDGET_ORDER = stringPreferencesKey("widget_order_json")
         val TODO_LIST = stringPreferencesKey("todo_list_json")
         val CHAPTER_LIST = stringPreferencesKey("chapter_list_json")
         val PDF_LIST = stringPreferencesKey("pdf_list_json")
         val FOCUS_MODE_ACTIVE = booleanPreferencesKey("focus_mode_active")
-        val FOCUS_BLOCKED_APPS = stringPreferencesKey("focus_blocked_apps_json")
+        // Renamed from the old "blocked apps" key: Focus Mode is now an allow-list (pick the
+        // apps you WANT visible while focused), so this deliberately doesn't reuse the old key.
+        val FOCUS_ALLOWED_APPS = stringPreferencesKey("focus_allowed_apps_json")
+        val BACKGROUND_IMAGE_URI = stringPreferencesKey("background_image_uri")
+        val BACKGROUND_COLOR = longPreferencesKey("background_color_argb")
     }
 
     // ---------- Profile ----------
@@ -105,6 +112,21 @@ class PreferencesManager(private val context: Context) {
         context.dataStore.edit { it[Keys.WIDGET_VISIBILITY] = json.encodeToString(visibility) }
     }
 
+    // ---------- Widget order (drag-to-reorder) ----------
+
+    /** Ids from [WidgetIds]. Any id missing from a saved (older) list is appended at the end. */
+    val widgetOrder: Flow<List<String>> = context.dataStore.data.map { prefs ->
+        val saved = prefs[Keys.WIDGET_ORDER]
+            ?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
+            ?: WidgetIds.DEFAULT_ORDER
+        val missing = WidgetIds.DEFAULT_ORDER.filterNot { it in saved }
+        saved + missing
+    }
+
+    suspend fun setWidgetOrder(order: List<String>) {
+        context.dataStore.edit { it[Keys.WIDGET_ORDER] = json.encodeToString(order) }
+    }
+
     // ---------- Daily To-Do list ----------
 
     val todoList: Flow<List<TodoItem>> = context.dataStore.data.map { prefs ->
@@ -143,14 +165,52 @@ class PreferencesManager(private val context: Context) {
         context.dataStore.edit { it[Keys.FOCUS_MODE_ACTIVE] = active }
     }
 
-    /** Package names the user has flagged as "distracting" - hidden whenever Focus Mode is ON. */
-    val focusBlockedApps: Flow<Set<String>> = context.dataStore.data.map { prefs ->
-        prefs[Keys.FOCUS_BLOCKED_APPS]
+    /**
+     * Package names the user has explicitly allowed - the ONLY apps shown while Focus Mode is
+     * ON. Everything not in this set is hidden. Starts empty, so a first-time user picks in.
+     */
+    val focusAllowedApps: Flow<Set<String>> = context.dataStore.data.map { prefs ->
+        prefs[Keys.FOCUS_ALLOWED_APPS]
             ?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
             ?.toSet() ?: emptySet()
     }
 
-    suspend fun setFocusBlockedApps(packages: Set<String>) {
-        context.dataStore.edit { it[Keys.FOCUS_BLOCKED_APPS] = json.encodeToString(packages.toList()) }
+    suspend fun setFocusAllowedApps(packages: Set<String>) {
+        context.dataStore.edit { it[Keys.FOCUS_ALLOWED_APPS] = json.encodeToString(packages.toList()) }
+    }
+
+    // ---------- Background customization ----------
+
+    val backgroundSettings: Flow<BackgroundSettings> = context.dataStore.data.map { prefs ->
+        BackgroundSettings(
+            imageUri = prefs[Keys.BACKGROUND_IMAGE_URI],
+            colorArgb = prefs[Keys.BACKGROUND_COLOR]
+        )
+    }
+
+    /** Setting an image clears any solid color, and vice versa, so exactly one is active. */
+    suspend fun setBackgroundImageUri(uriString: String?) {
+        context.dataStore.edit {
+            if (uriString == null) it.remove(Keys.BACKGROUND_IMAGE_URI) else {
+                it[Keys.BACKGROUND_IMAGE_URI] = uriString
+                it.remove(Keys.BACKGROUND_COLOR)
+            }
+        }
+    }
+
+    suspend fun setBackgroundColor(argb: Long?) {
+        context.dataStore.edit {
+            if (argb == null) it.remove(Keys.BACKGROUND_COLOR) else {
+                it[Keys.BACKGROUND_COLOR] = argb
+                it.remove(Keys.BACKGROUND_IMAGE_URI)
+            }
+        }
+    }
+
+    suspend fun clearBackground() {
+        context.dataStore.edit {
+            it.remove(Keys.BACKGROUND_IMAGE_URI)
+            it.remove(Keys.BACKGROUND_COLOR)
+        }
     }
 }
