@@ -1,17 +1,23 @@
 package com.zenith.launcher.ui.settings.components
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Image
@@ -21,10 +27,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.BackgroundSettings
@@ -74,6 +85,8 @@ fun BackgroundSettingsSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
+        BackgroundPreview(background = background)
+
         OutlinedButton(onClick = { pickImageLauncher.launch(arrayOf("image/*")) }) {
             Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
             Text("  Choose a photo")
@@ -94,6 +107,59 @@ fun BackgroundSettingsSection(
         OutlinedButton(onClick = onReset) {
             Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
             Text("  Reset to default")
+        }
+    }
+}
+
+/**
+ * Shows exactly what's currently active - the chosen photo, the chosen flat color, or a
+ * "Default" placeholder - so the user doesn't have to back out to Home to check what stuck.
+ */
+@Composable
+private fun BackgroundPreview(background: BackgroundSettings) {
+    val context = LocalContext.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(96.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                when {
+                    background.colorArgb != null -> Color(background.colorArgb)
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                }
+            )
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            background.imageUri != null -> {
+                val bitmap by produceState<ImageBitmap?>(initialValue = null, key1 = background.imageUri) {
+                    value = runCatching {
+                        context.contentResolver.openInputStream(Uri.parse(background.imageUri))?.use {
+                            BitmapFactory.decodeStream(it)?.asImageBitmap()
+                        }
+                    }.getOrNull()
+                }
+                bitmap?.let {
+                    Image(
+                        bitmap = it,
+                        contentDescription = "Current home background preview",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } ?: Text(
+                    "Couldn't load photo",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            background.colorArgb == null -> Text(
+                "Default",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

@@ -4,6 +4,7 @@ import com.zenith.launcher.data.local.PreferencesManager
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ChapterItem
 import com.zenith.launcher.data.model.ExamSettings
+import com.zenith.launcher.data.model.FontChoice
 import com.zenith.launcher.data.model.PdfLink
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetVisibility
@@ -25,14 +26,17 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     val isDarkMode: Flow<Boolean> = prefs.isDarkMode
     suspend fun setDarkMode(enabled: Boolean) = prefs.setDarkMode(enabled)
 
+    val fontChoice: Flow<FontChoice> = prefs.fontChoice
+    suspend fun setFontChoice(choice: FontChoice) = prefs.setFontChoice(choice)
+
     val iconPackPackage: Flow<String?> = prefs.iconPackPackage
     suspend fun setIconPackPackage(pkg: String?) = prefs.setIconPackPackage(pkg)
 
     val widgetVisibility: Flow<WidgetVisibility> = prefs.widgetVisibility
     suspend fun setWidgetVisibility(visibility: WidgetVisibility) = prefs.setWidgetVisibility(visibility)
 
-    val widgetOrder: Flow<List<String>> = prefs.widgetOrder
-    suspend fun setWidgetOrder(order: List<String>) = prefs.setWidgetOrder(order)
+    val widgetColumns: Flow<List<List<String>>> = prefs.widgetColumns
+    suspend fun setWidgetColumns(columns: List<List<String>>) = prefs.setWidgetColumns(columns)
 
     val todoList: Flow<List<TodoItem>> = prefs.todoList
     suspend fun setTodoList(items: List<TodoItem>) = prefs.setTodoList(items)

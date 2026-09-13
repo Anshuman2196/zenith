@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ExamSettings
+import com.zenith.launcher.data.model.FontChoice
 import com.zenith.launcher.data.model.IconPackInfo
 import com.zenith.launcher.data.model.WidgetVisibility
 import com.zenith.launcher.data.repository.AppRepository
@@ -21,6 +22,7 @@ data class SettingsUiState(
     val profileName: String = "",
     val examSettings: ExamSettings = ExamSettings(),
     val isDarkMode: Boolean = true,
+    val fontChoice: FontChoice = FontChoice.DEFAULT,
     val availableIconPacks: List<IconPackInfo> = emptyList(),
     val selectedIconPack: String? = null,
     val widgetVisibility: WidgetVisibility = WidgetVisibility(),
@@ -42,6 +44,11 @@ class SettingsViewModel(
     val isDarkMode: StateFlow<Boolean> =
         settingsRepository.isDarkMode.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    // Exposed separately for the same reason as isDarkMode: MainActivity needs this to build the
+    // theme before the rest of the app renders, without collecting the whole uiState chain.
+    val fontChoice: StateFlow<FontChoice> =
+        settingsRepository.fontChoice.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FontChoice.DEFAULT)
+
     init {
         viewModelScope.launch { _iconPacks.value = appRepository.getInstalledIconPacks() }
         viewModelScope.launch { _installedApps.value = appRepository.getInstalledApps() }
@@ -51,6 +58,7 @@ class SettingsViewModel(
         settingsRepository.profileName,
         settingsRepository.examSettings,
         isDarkMode,
+        fontChoice,
         _iconPacks,
         settingsRepository.iconPackPackage,
         settingsRepository.widgetVisibility,
@@ -62,12 +70,13 @@ class SettingsViewModel(
             profileName = array[0] as String,
             examSettings = array[1] as ExamSettings,
             isDarkMode = array[2] as Boolean,
-            availableIconPacks = array[3] as List<IconPackInfo>,
-            selectedIconPack = array[4] as String?,
-            widgetVisibility = array[5] as WidgetVisibility,
-            installedApps = array[6] as List<AppInfo>,
-            focusAllowedApps = array[7] as Set<String>,
-            background = array[8] as BackgroundSettings
+            fontChoice = array[3] as FontChoice,
+            availableIconPacks = array[4] as List<IconPackInfo>,
+            selectedIconPack = array[5] as String?,
+            widgetVisibility = array[6] as WidgetVisibility,
+            installedApps = array[7] as List<AppInfo>,
+            focusAllowedApps = array[8] as Set<String>,
+            background = array[9] as BackgroundSettings
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
 
@@ -80,6 +89,9 @@ class SettingsViewModel(
 
     // ---------- Theme ----------
     fun setDarkMode(enabled: Boolean) = viewModelScope.launch { settingsRepository.setDarkMode(enabled) }
+
+    // ---------- Font ----------
+    fun setFontChoice(choice: FontChoice) = viewModelScope.launch { settingsRepository.setFontChoice(choice) }
 
     // ---------- Icon pack ----------
     fun selectIconPack(packageName: String?) = viewModelScope.launch { settingsRepository.setIconPackPackage(packageName) }

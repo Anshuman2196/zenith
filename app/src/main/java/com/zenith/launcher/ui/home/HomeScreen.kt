@@ -3,34 +3,36 @@ package com.zenith.launcher.ui.home
 import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -39,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -55,20 +58,26 @@ import com.zenith.launcher.ui.home.components.AddPdfDialog
 import com.zenith.launcher.ui.home.components.AddTodoDialog
 import com.zenith.launcher.ui.home.components.AppDrawerOverlay
 import com.zenith.launcher.ui.home.components.ChapterBacklogWidget
-import com.zenith.launcher.ui.home.components.ClockWidget
 import com.zenith.launcher.ui.home.components.CountdownWidget
 import com.zenith.launcher.ui.home.components.FocusModeToggle
 import com.zenith.launcher.ui.home.components.GreetingHeader
 import com.zenith.launcher.ui.home.components.PdfLauncherWidget
 import com.zenith.launcher.ui.home.components.PomodoroWidget
 import com.zenith.launcher.ui.home.components.TodoWidget
-import com.zenith.launcher.ui.home.components.dragToReorder
-import com.zenith.launcher.ui.home.components.rememberDragDropListState
+import com.zenith.launcher.ui.home.components.gridDragToReorder
+import com.zenith.launcher.ui.home.components.rememberGridDragDropState
+import com.zenith.launcher.ui.home.components.reportColumnBounds
+
+/** How many columns the widget grid lays widgets out into - matches the reference design. */
+private const val GRID_COLUMN_COUNT = 3
+
+/** Cumulative horizontal drag (px) needed before a right-edge swipe counts as "open the drawer". */
+private const val DRAWER_SWIPE_OPEN_THRESHOLD_PX = 60f
 
 /**
  * The launcher's home screen: a live clock + greeting header, a hold-and-drag reorderable
- * column of widgets, and a swipe-up handle that opens the App Drawer as its own full-screen
- * area (see [AppDrawerOverlay]) - installed apps never live inside this scrolling widget list.
+ * 3-column widget grid, and a right-edge swipe (right-to-left) that opens the App Drawer as its
+ * own full-screen area (see [AppDrawerOverlay]) - installed apps never live inside this grid.
  */
 @Composable
 fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
@@ -88,45 +97,63 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
         Column(modifier = Modifier.fillMaxSize()) {
             GreetingHeader(greeting = state.greeting, onSettingsClick = onOpenSettings)
 
-            val listState = rememberLazyListState()
-            val visibleWidgetIds = remember(state.widgetOrder, state.widgetVisibility) {
-                state.widgetOrder.filter { id -> isWidgetEnabled(id, state.widgetVisibility) }
-            }
-            val dragState = rememberDragDropListState(listState = listState) { from, to ->
-                val fromId = visibleWidgetIds.getOrNull(from)
-                val toId = visibleWidgetIds.getOrNull(to)
-                if (fromId != null && toId != null) {
-                    val fullFrom = state.widgetOrder.indexOf(fromId)
-                    val fullTo = state.widgetOrder.indexOf(toId)
-                    if (fullFrom >= 0 && fullTo >= 0) viewModel.moveWidget(fullFrom, fullTo)
+            val visibleColumns = remember(state.widgetColumns, state.widgetVisibility) {
+                state.widgetColumns.map { column ->
+                    column.filter { id -> isWidgetEnabled(id, state.widgetVisibility) }
                 }
             }
+            val dragState = rememberGridDragDropState(columns = visibleColumns) { id, toColumn, toIndex ->
+                viewModel.moveWidget(id, toColumn, toIndex)
+            }
 
-            LazyColumn(
-                state = listState,
+            Row(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                itemsIndexed(visibleWidgetIds, key = { _, id -> id }) { index, id ->
-                    val isDragging = dragState.isDragging(index)
-                    Box(
+                for (columnIndex in 0 until GRID_COLUMN_COUNT) {
+                    Column(
                         modifier = Modifier
-                            .graphicsLayer { translationY = if (isDragging) dragState.draggingItemOffset else 0f }
-                            .zIndex(if (isDragging) 1f else 0f)
-                            .alpha(if (isDragging) 0.92f else 1f)
-                            .dragToReorder(dragState, index)
+                            .weight(1f)
+                            .reportColumnBounds(dragState, columnIndex),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        WidgetForId(
-                            id = id,
-                            state = state,
-                            viewModel = viewModel,
-                            onShowAddTodo = { showAddTodoDialog = true },
-                            onShowAddChapter = { showAddChapterDialog = true },
-                            onShowAddPdf = { showAddPdfDialog = true }
-                        )
+                        visibleColumns.getOrNull(columnIndex)?.forEach { id ->
+                            // Explicit key by widget id (not just position) so a widget's own
+                            // local state - e.g. a running Pomodoro timer - stays attached to
+                            // that widget as it moves, instead of Compose reattaching state to
+                            // whatever now sits in the old slot.
+                            key(id) {
+                                val isDragging = dragState.isDragging(id)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .graphicsLayer {
+                                            val offset = if (isDragging) dragState.draggingItemOffset else Offset.Zero
+                                            translationX = offset.x
+                                            translationY = offset.y
+                                            val scale = if (isDragging) 1.04f else 1f
+                                            scaleX = scale
+                                            scaleY = scale
+                                        }
+                                        .zIndex(if (isDragging) 1f else 0f)
+                                        .alpha(if (isDragging) 0.92f else 1f)
+                                        .gridDragToReorder(dragState, id)
+                                ) {
+                                    WidgetForId(
+                                        id = id,
+                                        state = state,
+                                        viewModel = viewModel,
+                                        onShowAddTodo = { showAddTodoDialog = true },
+                                        onShowAddChapter = { showAddChapterDialog = true },
+                                        onShowAddPdf = { showAddPdfDialog = true }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -134,10 +161,33 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
             AppDrawerHandle(onOpen = { isDrawerOpen = true })
         }
 
+        // Invisible strip along the right edge of the screen: swiping right-to-left starting
+        // from here opens the App Drawer, mirroring how edge swipes work elsewhere on Android
+        // without hijacking horizontal gestures used by widgets in the middle of the screen.
+        if (!isDrawerOpen) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .width(24.dp)
+                    .pointerInput(Unit) {
+                        var accumulated = 0f
+                        detectHorizontalDragGestures(
+                            onDragStart = { accumulated = 0f },
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
+                                accumulated += dragAmount
+                                if (accumulated < -DRAWER_SWIPE_OPEN_THRESHOLD_PX) isDrawerOpen = true
+                            }
+                        )
+                    }
+            )
+        }
+
         AnimatedVisibility(
             visible = isDrawerOpen,
-            enter = slideInVertically(initialOffsetY = { fullHeight -> fullHeight }),
-            exit = slideOutVertically(targetOffsetY = { fullHeight -> fullHeight }),
+            enter = slideInHorizontally(initialOffsetX = { fullWidth -> fullWidth }),
+            exit = slideOutHorizontally(targetOffsetX = { fullWidth -> fullWidth }),
             modifier = Modifier.fillMaxSize()
         ) {
             AppDrawerOverlay(
@@ -219,7 +269,11 @@ private fun HomeBackground(background: BackgroundSettings) {
     }
 }
 
-/** Small pill at the bottom of Home - tap it, or drag it upward, to reveal the App Drawer. */
+/**
+ * Small tappable hint at the bottom of Home pointing at the App Drawer. The actual gesture to
+ * open it is a right-to-left swipe from the screen's right edge (see the edge-swipe strip in
+ * [HomeScreen]); this row is a tap-friendly fallback plus a visible hint of that gesture.
+ */
 @Composable
 private fun AppDrawerHandle(onOpen: () -> Unit) {
     Column(
@@ -228,11 +282,6 @@ private fun AppDrawerHandle(onOpen: () -> Unit) {
             .fillMaxWidth()
             .padding(bottom = 12.dp, top = 4.dp)
             .clickable(onClick = onOpen)
-            .pointerInput(Unit) {
-                detectVerticalDragGestures { _, dragAmount ->
-                    if (dragAmount < -12f) onOpen()
-                }
-            }
     ) {
         Box(
             modifier = Modifier
@@ -242,13 +291,13 @@ private fun AppDrawerHandle(onOpen: () -> Unit) {
         )
         Spacer(Modifier.height(4.dp))
         Icon(
-            imageVector = Icons.Default.KeyboardArrowUp,
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
             contentDescription = "Open apps",
             tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             modifier = Modifier.size(16.dp)
         )
         Text(
-            "Apps",
+            "Swipe left for apps",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
@@ -256,7 +305,6 @@ private fun AppDrawerHandle(onOpen: () -> Unit) {
 }
 
 private fun isWidgetEnabled(id: String, visibility: com.zenith.launcher.data.model.WidgetVisibility): Boolean = when (id) {
-    WidgetIds.CLOCK -> visibility.clockEnabled
     WidgetIds.COUNTDOWN -> visibility.countdownEnabled
     WidgetIds.FOCUS_MODE -> visibility.focusModeEnabled
     WidgetIds.POMODORO -> visibility.pomodoroEnabled
@@ -276,7 +324,6 @@ private fun WidgetForId(
     onShowAddPdf: () -> Unit
 ) {
     when (id) {
-        WidgetIds.CLOCK -> ClockWidget()
         WidgetIds.COUNTDOWN -> CountdownWidget(state.jeeMainDaysLeft, state.jeeAdvancedDaysLeft)
         WidgetIds.FOCUS_MODE -> FocusModeToggle(state.isFocusModeActive, viewModel::toggleFocusMode)
         WidgetIds.POMODORO -> PomodoroWidget()

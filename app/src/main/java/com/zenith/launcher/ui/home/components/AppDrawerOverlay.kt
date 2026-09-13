@@ -3,7 +3,7 @@ package com.zenith.launcher.ui.home.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,9 +48,10 @@ import com.zenith.launcher.data.model.AppInfo
 
 /**
  * The app drawer: every installed app, in its own dedicated full-screen area rather than mixed
- * into the Home widget scroll. Opened by dragging the handle at the bottom of Home upward (or
- * tapping it) - matching how a stock Android launcher separates "widgets" from "all apps".
- * Dismissed by the X button, a swipe back down, or the system back gesture.
+ * into the Home widget grid. Opened with a right-to-left swipe from Home's right edge (or by
+ * tapping the "Swipe left for apps" hint) - matching how a stock Android launcher separates
+ * "widgets" from "all apps". Dismissed by the X button, a swipe back to the right, or the
+ * system back gesture.
  */
 @Composable
 fun AppDrawerOverlay(apps: List<AppInfo>, onLaunch: (AppInfo) -> Unit, onDismiss: () -> Unit) {
@@ -64,13 +65,13 @@ fun AppDrawerOverlay(apps: List<AppInfo>, onLaunch: (AppInfo) -> Unit, onDismiss
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background.copy(alpha = 0.98f))
             .pointerInput(Unit) {
-                detectVerticalDragGestures { _, dragAmount ->
+                detectHorizontalDragGestures { _, dragAmount ->
                     if (dragAmount > 12f) onDismiss()
                 }
             }
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Drag handle - swiping down anywhere below it also closes the drawer.
+            // Drag handle - swiping right anywhere below it also closes the drawer.
             Box(
                 modifier = Modifier
                     .padding(top = 10.dp)

@@ -9,6 +9,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ChapterItem
 import com.zenith.launcher.data.model.ExamSettings
+import com.zenith.launcher.data.model.FontChoice
 import com.zenith.launcher.data.model.PdfLink
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetIds
@@ -38,6 +39,7 @@ class PreferencesManager(private val context: Context) {
         val JEE_MAIN_DATE = longPreferencesKey("jee_main_date")
         val JEE_ADVANCED_DATE = longPreferencesKey("jee_advanced_date")
         val DARK_MODE = booleanPreferencesKey("dark_mode")
+        val FONT_CHOICE = stringPreferencesKey("font_choice")
         val ICON_PACK_PACKAGE = stringPreferencesKey("icon_pack_package")
         val WIDGET_VISIBILITY = stringPreferencesKey("widget_visibility_json")
         val WIDGET_ORDER = stringPreferencesKey("widget_order_json")
@@ -90,6 +92,15 @@ class PreferencesManager(private val context: Context) {
         context.dataStore.edit { it[Keys.DARK_MODE] = enabled }
     }
 
+    // ---------- Font ----------
+
+    val fontChoice: Flow<FontChoice> =
+        context.dataStore.data.map { FontChoice.fromStorageValue(it[Keys.FONT_CHOICE]) }
+
+    suspend fun setFontChoice(choice: FontChoice) {
+        context.dataStore.edit { it[Keys.FONT_CHOICE] = choice.name }
+    }
+
     // ---------- Icon pack ----------
 
     val iconPackPackage: Flow<String?> = context.dataStore.data.map { it[Keys.ICON_PACK_PACKAGE] }
@@ -112,19 +123,47 @@ class PreferencesManager(private val context: Context) {
         context.dataStore.edit { it[Keys.WIDGET_VISIBILITY] = json.encodeToString(visibility) }
     }
 
-    // ---------- Widget order (drag-to-reorder) ----------
+    // ---------- Widget columns (3-column drag-to-reorder grid) ----------
 
-    /** Ids from [WidgetIds]. Any id missing from a saved (older) list is appended at the end. */
-    val widgetOrder: Flow<List<String>> = context.dataStore.data.map { prefs ->
-        val saved = prefs[Keys.WIDGET_ORDER]
-            ?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
-            ?: WidgetIds.DEFAULT_ORDER
-        val missing = WidgetIds.DEFAULT_ORDER.filterNot { it in saved }
-        saved + missing
+    /**
+     * The Home screen's 3-column layout, each column an ordered list of widget ids from
+     * [WidgetIds]. Understands two on-disk shapes under the same key for a seamless upgrade:
+     * the current `List<List<String>>` (columns), and the older flat `List<String>` this app
+     * used before the grid layout existed (round-robin'd into 3 columns so nobody's saved
+     * arrangement is lost). Any widget id missing from a saved arrangement - e.g. a new widget
+     * added in a later app version - is appended to the shortest column.
+     */
+    val widgetColumns: Flow<List<List<String>>> = context.dataStore.data.map { prefs ->
+        val raw = prefs[Keys.WIDGET_ORDER]
+        val columns: List<List<String>> = raw
+            ?.let { runCatching { json.decodeFromString<List<List<String>>>(it) }.getOrNull() }
+            ?: raw
+                ?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
+                ?.let { flat -> roundRobinColumns(flat) }
+            ?: WidgetIds.DEFAULT_COLUMNS
+
+        val placed = columns.flatten().toSet()
+        val missing = WidgetIds.DEFAULT_ORDER.filterNot { it in placed }
+        if (missing.isEmpty()) columns else appendToShortestColumns(columns, missing)
     }
 
-    suspend fun setWidgetOrder(order: List<String>) {
-        context.dataStore.edit { it[Keys.WIDGET_ORDER] = json.encodeToString(order) }
+    suspend fun setWidgetColumns(columns: List<List<String>>) {
+        context.dataStore.edit { it[Keys.WIDGET_ORDER] = json.encodeToString(columns) }
+    }
+
+    /** Distributes a flat widget order into 3 columns, i, i+3, i+6... in column i%3. */
+    private fun roundRobinColumns(flat: List<String>): List<List<String>> {
+        val columns = List(3) { mutableListOf<String>() }
+        flat.forEachIndexed { index, id -> columns[index % 3].add(id) }
+        return columns
+    }
+
+    /** Appends each of [missing] to whichever column currently has the fewest widgets. */
+    private fun appendToShortestColumns(columns: List<List<String>>, missing: List<String>): List<List<String>> {
+        val mutableColumns = columns.map { it.toMutableList() }.toMutableList()
+        while (mutableColumns.size < 3) mutableColumns.add(mutableListOf())
+        missing.forEach { id -> mutableColumns.minByOrNull { it.size }!!.add(id) }
+        return mutableColumns
     }
 
     // ---------- Daily To-Do list ----------

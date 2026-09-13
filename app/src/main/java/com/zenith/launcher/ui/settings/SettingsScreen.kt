@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.zenith.launcher.ui.settings.components.BackgroundSettingsSection
 import com.zenith.launcher.ui.settings.components.ExamSettingsSection
 import com.zenith.launcher.ui.settings.components.FocusModeAppsSection
+import com.zenith.launcher.ui.settings.components.FontSettingsSection
 import com.zenith.launcher.ui.settings.components.IconPackPickerSection
 import com.zenith.launcher.ui.settings.components.ProfileSettingsSection
 import com.zenith.launcher.ui.settings.components.ThemeToggleSection
@@ -31,7 +32,7 @@ import com.zenith.launcher.ui.settings.components.WidgetVisibilitySection
  * via [SettingsViewModel], so Home reflects changes immediately - no explicit "Save" button
  * except on the Profile Name field, which commits on tap.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+ @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
     val state by viewModel.uiState.collectAsState()
@@ -67,6 +68,9 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
             }
             item {
                 ThemeToggleSection(isDarkMode = state.isDarkMode, onToggle = viewModel::setDarkMode)
+            }
+            item {
+                FontSettingsSection(selected = state.fontChoice, onSelect = viewModel::setFontChoice)
             }
             item {
                 IconPackPickerSection(

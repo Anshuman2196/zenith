@@ -28,7 +28,8 @@ data class HomeUiState(
     val greeting: String = "",
     val apps: List<AppInfo> = emptyList(),
     val widgetVisibility: WidgetVisibility = WidgetVisibility(),
-    val widgetOrder: List<String> = emptyList(),
+    /** The Home screen's 3-column grid arrangement - each entry is one column's ordered ids. */
+    val widgetColumns: List<List<String>> = emptyList(),
     val jeeMainDaysLeft: Long? = null,
     val jeeAdvancedDaysLeft: Long? = null,
     val todoItems: List<TodoItem> = emptyList(),
@@ -65,7 +66,7 @@ class HomeViewModel(
         val name: String,
         val exam: ExamSettings,
         val visibility: WidgetVisibility,
-        val order: List<String>,
+        val columns: List<List<String>>,
         val focusActive: Boolean,
         val allowedApps: Set<String>,
         val background: BackgroundSettings
@@ -75,7 +76,7 @@ class HomeViewModel(
         settingsRepository.profileName,
         settingsRepository.examSettings,
         settingsRepository.widgetVisibility,
-        settingsRepository.widgetOrder,
+        settingsRepository.widgetColumns,
         settingsRepository.focusModeActive,
         settingsRepository.focusAllowedApps,
         settingsRepository.backgroundSettings
@@ -84,7 +85,10 @@ class HomeViewModel(
             name = array[0] as String,
             exam = array[1] as ExamSettings,
             visibility = array[2] as WidgetVisibility,
-            order = array[3] as List<String>,
+            // Unchecked cast (as with every other field pulled out of this combine() array) -
+            // safe because settingsRepository.widgetColumns is the only Flow<List<List<String>>>
+            // fed into this combine call, always in this position.
+            columns = array[3] as List<List<String>>,
             focusActive = array[4] as Boolean,
             allowedApps = array[5] as Set<String>,
             background = array[6] as BackgroundSettings
@@ -113,7 +117,7 @@ class HomeViewModel(
             greeting = buildGreeting(base.name),
             apps = visibleApps,
             widgetVisibility = base.visibility,
-            widgetOrder = base.order,
+            widgetColumns = base.columns,
             jeeMainDaysLeft = base.exam.jeeMainDateMillis?.let { CountdownUtil.daysRemaining(it) },
             jeeAdvancedDaysLeft = base.exam.jeeAdvancedDateMillis?.let { CountdownUtil.daysRemaining(it) },
             todoItems = todos,
@@ -139,14 +143,25 @@ class HomeViewModel(
         settingsRepository.setFocusModeActive(!uiState.value.isFocusModeActive)
     }
 
-    // ---------- Widget drag-to-reorder ----------
-    /** Moves the widget at [from] to sit at [to] within the current order, then persists it. */
-    fun moveWidget(from: Int, to: Int) {
-        val current = uiState.value.widgetOrder.toMutableList()
-        if (from !in current.indices || to !in current.indices) return
-        val moved = current.removeAt(from)
-        current.add(to, moved)
-        viewModelScope.launch { settingsRepository.setWidgetOrder(current) }
+    // ---------- Widget drag-to-reorder (3-column grid) ----------
+    /**
+     * Moves widget [id] out of whichever column currently holds it and re-inserts it at
+     * [toIndex] within [toColumn], then persists the new arrangement. Works for both a plain
+     * reorder within one column and a drag across columns - both are just "remove, then insert
+     * elsewhere" on the same column list.
+     */
+    fun moveWidget(id: String, toColumn: Int, toIndex: Int) {
+        val current = uiState.value.widgetColumns.map { it.toMutableList() }.toMutableList()
+        if (toColumn !in current.indices) return
+
+        val fromColumn = current.indexOfFirst { it.contains(id) }
+        if (fromColumn == -1) return
+        current[fromColumn].remove(id)
+
+        val target = current[toColumn]
+        target.add(toIndex.coerceIn(0, target.size), id)
+
+        viewModelScope.launch { settingsRepository.setWidgetColumns(current) }
     }
 
     // ---------- Daily to-do ----------
