@@ -29,6 +29,7 @@ import com.zenith.launcher.ui.settings.components.WidgetVisibilitySection
  * via [SettingsViewModel], so Home reflects changes immediately - no explicit "Save" button
  * except on the Profile Name field, which commits on tap.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
     val state by viewModel.uiState.collectAsState()
