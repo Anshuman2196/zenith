@@ -20,9 +20,17 @@ import java.time.format.DateTimeFormatter
  * the launcher's only clock (there is no separate clock widget on the grid). Ticks forward every
  * second so it never looks stale even if the launcher process has been sitting in the foreground
  * a while.
+ *
+ * [timeColor]/[dateColor] default to the theme's on-background colors, but [GreetingHeader]
+ * overrides them with a fixed light color when a photo background is active, since a photo's
+ * brightness has nothing to do with whether Light or Dark theme is selected.
  */
 @Composable
-fun InlineClock(modifier: Modifier = Modifier) {
+fun InlineClock(
+    modifier: Modifier = Modifier,
+    timeColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onBackground,
+    dateColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
     var now by remember { mutableStateOf(LocalDateTime.now()) }
 
     LaunchedEffect(Unit) {
@@ -36,13 +44,13 @@ fun InlineClock(modifier: Modifier = Modifier) {
         Text(
             text = now.format(TIME_FORMATTER),
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = timeColor,
             textAlign = TextAlign.End
         )
         Text(
             text = now.format(DATE_FORMATTER_SHORT),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = dateColor,
             textAlign = TextAlign.End
         )
     }

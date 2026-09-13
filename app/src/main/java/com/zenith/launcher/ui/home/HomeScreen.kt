@@ -18,8 +18,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -94,8 +96,17 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         HomeBackground(background = state.background)
 
-        Column(modifier = Modifier.fillMaxSize()) {
-            GreetingHeader(greeting = state.greeting, onSettingsClick = onOpenSettings)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            GreetingHeader(
+                greeting = state.greeting,
+                onSettingsClick = onOpenSettings,
+                overPhotoBackground = state.background.imageUri != null
+            )
 
             val visibleColumns = remember(state.widgetColumns, state.widgetVisibility) {
                 state.widgetColumns.map { column ->
@@ -158,7 +169,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                 }
             }
 
-            AppDrawerHandle(onOpen = { isDrawerOpen = true })
+            AppDrawerHandle(onOpen = { isDrawerOpen = true }, overPhotoBackground = state.background.imageUri != null)
         }
 
         // Invisible strip along the right edge of the screen: swiping right-to-left starting
@@ -275,7 +286,9 @@ private fun HomeBackground(background: BackgroundSettings) {
  * [HomeScreen]); this row is a tap-friendly fallback plus a visible hint of that gesture.
  */
 @Composable
-private fun AppDrawerHandle(onOpen: () -> Unit) {
+private fun AppDrawerHandle(onOpen: () -> Unit, overPhotoBackground: Boolean = false) {
+    val baseColor = if (overPhotoBackground) Color.White else MaterialTheme.colorScheme.onBackground
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -287,19 +300,19 @@ private fun AppDrawerHandle(onOpen: () -> Unit) {
             modifier = Modifier
                 .size(width = 40.dp, height = 4.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.35f))
+                .background(baseColor.copy(alpha = 0.35f))
         )
         Spacer(Modifier.height(4.dp))
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
             contentDescription = "Open apps",
-            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+            tint = baseColor.copy(alpha = 0.6f),
             modifier = Modifier.size(16.dp)
         )
         Text(
             "Swipe left for apps",
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            color = baseColor.copy(alpha = 0.6f)
         )
     }
 }

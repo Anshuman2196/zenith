@@ -14,6 +14,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -22,9 +24,28 @@ import androidx.compose.ui.unit.dp
  * Top header, matching the reference design: the aspirant's name is centered across the full
  * width of the screen (not just the leftover space next to the clock), while the live clock +
  * date and the gear icon into Settings sit pinned to the top-right corner as their own group.
+ *
+ * [overPhotoBackground] should be true whenever Home is showing a user photo behind it (see
+ * [com.zenith.launcher.ui.home.HomeScreen]). A photo's brightness has nothing to do with whether
+ * Light or Dark theme is selected, so instead of using the theme's `onBackground` color (which
+ * can turn near-invisible - dark text on a dark photo, in Light theme) this header always renders
+ * in a fixed light color with a soft shadow over a photo, matching how the darkening scrim behind
+ * it is applied regardless of theme.
  */
 @Composable
-fun GreetingHeader(greeting: String, onSettingsClick: () -> Unit) {
+fun GreetingHeader(
+    greeting: String,
+    onSettingsClick: () -> Unit,
+    overPhotoBackground: Boolean = false
+) {
+    val textColor = if (overPhotoBackground) Color.White else MaterialTheme.colorScheme.onBackground
+    val secondaryTextColor = if (overPhotoBackground) Color.White.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val textShadow = if (overPhotoBackground) {
+        Shadow(color = Color.Black.copy(alpha = 0.6f), blurRadius = 12f)
+    } else {
+        null
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -32,8 +53,8 @@ fun GreetingHeader(greeting: String, onSettingsClick: () -> Unit) {
     ) {
         Text(
             text = greeting,
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
+            style = MaterialTheme.typography.headlineMedium.copy(shadow = textShadow),
+            color = textColor,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -50,12 +71,12 @@ fun GreetingHeader(greeting: String, onSettingsClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            InlineClock()
+            InlineClock(timeColor = textColor, dateColor = secondaryTextColor)
             IconButton(onClick = onSettingsClick) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "Launcher settings",
-                    tint = MaterialTheme.colorScheme.onBackground
+                    tint = textColor
                 )
             }
         }
