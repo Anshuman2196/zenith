@@ -1,0 +1,36 @@
+name: Build Debug APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # No gradlew wrapper is committed to this repo (it's a binary .jar, awkward to create
+      # from a tablet browser), so this action installs Gradle itself - every later step
+      # calls it directly as "gradle".
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zenith-launcher-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
