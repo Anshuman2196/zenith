@@ -1,7 +1,6 @@
 package com.zenith.launcher.ui.settings.components
 
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,6 +24,7 @@ import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,6 +39,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.BackgroundSettings
+import com.zenith.launcher.util.BitmapUtils
 
 /** Preset swatches offered alongside "pick a photo" - kept close to the app's calm palette. */
 private val PRESET_COLORS: List<Long> = listOf(
@@ -58,9 +59,11 @@ private val PRESET_COLORS: List<Long> = listOf(
 @Composable
 fun BackgroundSettingsSection(
     background: BackgroundSettings,
+    syncLockScreenWallpaper: Boolean,
     onPickImage: (String?) -> Unit,
     onPickColor: (Long?) -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onSyncLockScreenWallpaperChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -104,6 +107,20 @@ fun BackgroundSettingsSection(
             }
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Also use this as Lock Screen wallpaper", style = MaterialTheme.typography.bodyMedium)
+            Switch(checked = syncLockScreenWallpaper, onCheckedChange = onSyncLockScreenWallpaperChange)
+        }
+        Text(
+            "Keeps Home and Lock Screen showing the same photo - only applies when you pick a photo, not a flat color.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
         OutlinedButton(onClick = onReset) {
             Icon(Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
             Text("  Reset to default")
@@ -136,11 +153,14 @@ private fun BackgroundPreview(background: BackgroundSettings) {
         when {
             background.imageUri != null -> {
                 val bitmap by produceState<ImageBitmap?>(initialValue = null, key1 = background.imageUri) {
-                    value = runCatching {
-                        context.contentResolver.openInputStream(Uri.parse(background.imageUri))?.use {
-                            BitmapFactory.decodeStream(it)?.asImageBitmap()
-                        }
-                    }.getOrNull()
+                    value = BitmapUtils.decodeSampledBitmapFromUri(
+                        context = context,
+                        uri = Uri.parse(background.imageUri),
+                        // This is just a small preview thumbnail, not the actual full-screen
+                        // background - no need to decode anywhere near screen resolution for it.
+                        reqWidth = 400,
+                        reqHeight = 200
+                    )?.asImageBitmap()
                 }
                 bitmap?.let {
                     Image(

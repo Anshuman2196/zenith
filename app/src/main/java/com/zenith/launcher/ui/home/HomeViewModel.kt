@@ -2,11 +2,14 @@ package com.zenith.launcher.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zenith.launcher.data.model.AppCategory
 import com.zenith.launcher.data.model.AppInfo
+import com.zenith.launcher.data.model.AppShortcutRef
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ChapterItem
 import com.zenith.launcher.data.model.ChapterStatus
 import com.zenith.launcher.data.model.ExamSettings
+import com.zenith.launcher.data.model.MilestoneTarget
 import com.zenith.launcher.data.model.PdfLink
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetVisibility
@@ -30,15 +33,24 @@ data class HomeUiState(
     val widgetVisibility: WidgetVisibility = WidgetVisibility(),
     /** The Home screen's 3-column grid arrangement - each entry is one column's ordered ids. */
     val widgetColumns: List<List<String>> = emptyList(),
-    val jeeMainDaysLeft: Long? = null,
-    val jeeAdvancedDaysLeft: Long? = null,
+    val examCountdowns: List<ExamCountdown> = emptyList(),
     val todoItems: List<TodoItem> = emptyList(),
     val chapterItems: List<ChapterItem> = emptyList(),
     val pdfLinks: List<PdfLink> = emptyList(),
     val isFocusModeActive: Boolean = false,
     val background: BackgroundSettings = BackgroundSettings(),
-    val isLoadingApps: Boolean = true
+    val isLoadingApps: Boolean = true,
+    val milestoneTarget: MilestoneTarget = MilestoneTarget(),
+    /** Resolved live from [appShortcutRefs] against currently-installed apps every time either changes. */
+    val appShortcuts: List<AppInfo> = emptyList(),
+    /** Same resolution rule as [appShortcuts], newest-launched first. */
+    val recentApps: List<AppInfo> = emptyList(),
+    val appCategories: Map<String, AppCategory> = emptyMap(),
+    val lockOnDoubleTap: Boolean = false
 )
+
+/** One exam's live countdown, derived each recomposition from [com.zenith.launcher.data.model.ExamTarget]. */
+data class ExamCountdown(val id: String, val name: String, val daysLeft: Long?)
 
 class HomeViewModel(
     private val appRepository: AppRepository,
@@ -69,7 +81,12 @@ class HomeViewModel(
         val columns: List<List<String>>,
         val focusActive: Boolean,
         val allowedApps: Set<String>,
-        val background: BackgroundSettings
+        val background: BackgroundSettings,
+        val milestoneTarget: MilestoneTarget,
+        val appShortcutRefs: List<AppShortcutRef>,
+        val recentAppRefs: List<AppShortcutRef>,
+        val appCategories: Map<String, AppCategory>,
+        val lockOnDoubleTap: Boolean
     )
 
     private val baseState = combine(
@@ -79,7 +96,12 @@ class HomeViewModel(
         settingsRepository.widgetColumns,
         settingsRepository.focusModeActive,
         settingsRepository.focusAllowedApps,
-        settingsRepository.backgroundSettings
+        settingsRepository.backgroundSettings,
+        settingsRepository.milestoneTarget,
+        settingsRepository.appShortcuts,
+        settingsRepository.recentApps,
+        settingsRepository.appCategories,
+        settingsRepository.lockOnDoubleTap
     ) { array ->
         BaseSettings(
             name = array[0] as String,
@@ -91,7 +113,15 @@ class HomeViewModel(
             columns = array[3] as List<List<String>>,
             focusActive = array[4] as Boolean,
             allowedApps = array[5] as Set<String>,
-            background = array[6] as BackgroundSettings
+            background = array[6] as BackgroundSettings,
+            milestoneTarget = array[7] as MilestoneTarget,
+            @Suppress("UNCHECKED_CAST")
+            appShortcutRefs = array[8] as List<AppShortcutRef>,
+            @Suppress("UNCHECKED_CAST")
+            recentAppRefs = array[9] as List<AppShortcutRef>,
+            @Suppress("UNCHECKED_CAST")
+            appCategories = array[10] as Map<String, AppCategory>,
+            lockOnDoubleTap = array[11] as Boolean
         )
     }
 
@@ -113,19 +143,34 @@ class HomeViewModel(
         // Focus Mode is an ALLOW-list: when active, only explicitly-allowed apps show up.
         val visibleApps = if (base.focusActive) apps.filter { it.packageName in base.allowedApps } else apps
 
+        // Resolved live (not persisted) so a shortcut always shows the current icon-pack skin
+        // and label, and silently drops off if the app's since been uninstalled.
+        val resolvedShortcuts = base.appShortcutRefs.mapNotNull { ref ->
+            apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName }
+        }
+        val resolvedRecents = base.recentAppRefs.mapNotNull { ref ->
+            apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName }
+        }
+
         HomeUiState(
             greeting = buildGreeting(base.name),
             apps = visibleApps,
             widgetVisibility = base.visibility,
             widgetColumns = base.columns,
-            jeeMainDaysLeft = base.exam.jeeMainDateMillis?.let { CountdownUtil.daysRemaining(it) },
-            jeeAdvancedDaysLeft = base.exam.jeeAdvancedDateMillis?.let { CountdownUtil.daysRemaining(it) },
+            examCountdowns = base.exam.exams.map { exam ->
+                ExamCountdown(id = exam.id, name = exam.name, daysLeft = exam.dateMillis?.let { CountdownUtil.daysRemaining(it) })
+            },
             todoItems = todos,
             chapterItems = chapters,
             pdfLinks = pdfs,
             isFocusModeActive = base.focusActive,
             background = base.background,
-            isLoadingApps = loading
+            isLoadingApps = loading,
+            milestoneTarget = base.milestoneTarget,
+            appShortcuts = resolvedShortcuts,
+            recentApps = resolvedRecents,
+            appCategories = base.appCategories,
+            lockOnDoubleTap = base.lockOnDoubleTap
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 
@@ -136,7 +181,12 @@ class HomeViewModel(
         return phrases[dayOfYear % phrases.size].format(name)
     }
 
-    fun launchApp(app: AppInfo) = appRepository.launchApp(app.packageName, app.activityClassName)
+    fun launchApp(app: AppInfo) {
+        appRepository.launchApp(app.packageName, app.activityClassName)
+        viewModelScope.launch {
+            settingsRepository.recordAppLaunch(AppShortcutRef(app.packageName, app.activityClassName))
+        }
+    }
 
     // ---------- Focus mode ----------
     fun toggleFocusMode() = viewModelScope.launch {
@@ -201,4 +251,39 @@ class HomeViewModel(
     fun deletePdfLink(id: String) = viewModelScope.launch {
         settingsRepository.setPdfList(uiState.value.pdfLinks.filterNot { it.id == id })
     }
+
+    // ---------- Milestone / target ----------
+    fun setMilestoneTarget(target: MilestoneTarget) = viewModelScope.launch {
+        settingsRepository.setMilestoneTarget(target)
+    }
+
+    // ---------- App Shortcuts widget ----------
+    fun addAppShortcut(app: AppInfo) = viewModelScope.launch {
+        val current = settingsRepository.appShortcuts.first()
+        val ref = AppShortcutRef(app.packageName, app.activityClassName)
+        if (current.any { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName }) return@launch
+        settingsRepository.setAppShortcuts(current + ref)
+    }
+
+    fun removeAppShortcut(app: AppInfo) = viewModelScope.launch {
+        val current = settingsRepository.appShortcuts.first()
+        settingsRepository.setAppShortcuts(
+            current.filterNot { it.packageName == app.packageName && it.activityClassName == app.activityClassName }
+        )
+    }
+
+    fun removeFromRecents(app: AppInfo) = viewModelScope.launch {
+        settingsRepository.removeFromRecentApps(AppShortcutRef(app.packageName, app.activityClassName))
+    }
+
+    // ---------- App Drawer categories ----------
+    fun setAppCategory(app: AppInfo, category: AppCategory) = viewModelScope.launch {
+        settingsRepository.setAppCategory(app.packageName, category)
+    }
+
+    // ---------- Uninstall / app info ----------
+    /** Only apps not flagged as system apps can be uninstalled - matches Android's own rule. */
+    fun canUninstall(app: AppInfo): Boolean = !app.isSystemApp
+    fun uninstallApp(app: AppInfo) = appRepository.uninstallApp(app.packageName)
+    fun openAppInfo(app: AppInfo) = appRepository.openAppInfo(app.packageName)
 }

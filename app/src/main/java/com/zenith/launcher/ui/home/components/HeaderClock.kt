@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -43,13 +44,13 @@ fun InlineClock(
     Column(modifier = modifier) {
         Text(
             text = now.format(TIME_FORMATTER),
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp, lineHeight = 32.sp),
             color = timeColor,
             textAlign = TextAlign.End
         )
         Text(
             text = now.format(DATE_FORMATTER_SHORT),
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 14.sp, lineHeight = 18.sp),
             color = dateColor,
             textAlign = TextAlign.End
         )

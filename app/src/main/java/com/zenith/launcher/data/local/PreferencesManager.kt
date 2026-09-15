@@ -6,10 +6,13 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.zenith.launcher.data.model.AppCategory
+import com.zenith.launcher.data.model.AppShortcutRef
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ChapterItem
 import com.zenith.launcher.data.model.ExamSettings
 import com.zenith.launcher.data.model.FontChoice
+import com.zenith.launcher.data.model.MilestoneTarget
 import com.zenith.launcher.data.model.PdfLink
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetIds
@@ -22,6 +25,9 @@ import kotlinx.serialization.json.Json
 
 /** Single top-level DataStore instance for the whole app process. */
 private val Context.dataStore by preferencesDataStore(name = "launcher_settings")
+
+/** How many entries the Recent Apps deck (see RecentAppsOverlay) keeps. */
+private const val MAX_RECENT_APPS = 15
 
 /**
  * Central read/write point for every persisted launcher setting. Each setting is exposed as a
@@ -36,10 +42,10 @@ class PreferencesManager(private val context: Context) {
 
     private object Keys {
         val PROFILE_NAME = stringPreferencesKey("profile_name")
-        val JEE_MAIN_DATE = longPreferencesKey("jee_main_date")
-        val JEE_ADVANCED_DATE = longPreferencesKey("jee_advanced_date")
+        val EXAM_SETTINGS = stringPreferencesKey("exam_settings_json")
         val DARK_MODE = booleanPreferencesKey("dark_mode")
         val FONT_CHOICE = stringPreferencesKey("font_choice")
+        val CUSTOM_FONT_PATH = stringPreferencesKey("custom_font_path")
         val ICON_PACK_PACKAGE = stringPreferencesKey("icon_pack_package")
         val WIDGET_VISIBILITY = stringPreferencesKey("widget_visibility_json")
         val WIDGET_ORDER = stringPreferencesKey("widget_order_json")
@@ -52,6 +58,12 @@ class PreferencesManager(private val context: Context) {
         val FOCUS_ALLOWED_APPS = stringPreferencesKey("focus_allowed_apps_json")
         val BACKGROUND_IMAGE_URI = stringPreferencesKey("background_image_uri")
         val BACKGROUND_COLOR = longPreferencesKey("background_color_argb")
+        val SYNC_LOCK_SCREEN_WALLPAPER = booleanPreferencesKey("sync_lock_screen_wallpaper")
+        val MILESTONE_TARGET = stringPreferencesKey("milestone_target_json")
+        val APP_SHORTCUTS = stringPreferencesKey("app_shortcuts_json")
+        val RECENT_APPS = stringPreferencesKey("recent_apps_json")
+        val APP_CATEGORIES = stringPreferencesKey("app_categories_json")
+        val LOCK_ON_DOUBLE_TAP = booleanPreferencesKey("lock_on_double_tap")
     }
 
     // ---------- Profile ----------
@@ -62,25 +74,14 @@ class PreferencesManager(private val context: Context) {
         context.dataStore.edit { it[Keys.PROFILE_NAME] = name }
     }
 
-    // ---------- Exam dates ----------
+    // ---------- Exams (fully user-managed list - see ExamTarget) ----------
 
-    val examSettings: Flow<ExamSettings> = context.dataStore.data.map {
-        ExamSettings(
-            jeeMainDateMillis = it[Keys.JEE_MAIN_DATE],
-            jeeAdvancedDateMillis = it[Keys.JEE_ADVANCED_DATE]
-        )
+    val examSettings: Flow<ExamSettings> = context.dataStore.data.map { prefs ->
+        prefs[Keys.EXAM_SETTINGS]?.let { runCatching { json.decodeFromString<ExamSettings>(it) }.getOrNull() } ?: ExamSettings()
     }
 
-    suspend fun setJeeMainDate(epochMillis: Long?) {
-        context.dataStore.edit {
-            if (epochMillis == null) it.remove(Keys.JEE_MAIN_DATE) else it[Keys.JEE_MAIN_DATE] = epochMillis
-        }
-    }
-
-    suspend fun setJeeAdvancedDate(epochMillis: Long?) {
-        context.dataStore.edit {
-            if (epochMillis == null) it.remove(Keys.JEE_ADVANCED_DATE) else it[Keys.JEE_ADVANCED_DATE] = epochMillis
-        }
+    suspend fun setExamSettings(settings: ExamSettings) {
+        context.dataStore.edit { it[Keys.EXAM_SETTINGS] = json.encodeToString(settings) }
     }
 
     // ---------- Theme ----------
@@ -99,6 +100,13 @@ class PreferencesManager(private val context: Context) {
 
     suspend fun setFontChoice(choice: FontChoice) {
         context.dataStore.edit { it[Keys.FONT_CHOICE] = choice.name }
+    }
+
+    /** Absolute path (in app-internal storage - see FontImportHelper) to a user-imported font file. */
+    val customFontPath: Flow<String?> = context.dataStore.data.map { it[Keys.CUSTOM_FONT_PATH] }
+
+    suspend fun setCustomFontPath(path: String?) {
+        context.dataStore.edit { if (path == null) it.remove(Keys.CUSTOM_FONT_PATH) else it[Keys.CUSTOM_FONT_PATH] = path }
     }
 
     // ---------- Icon pack ----------
@@ -251,5 +259,88 @@ class PreferencesManager(private val context: Context) {
             it.remove(Keys.BACKGROUND_IMAGE_URI)
             it.remove(Keys.BACKGROUND_COLOR)
         }
+    }
+
+    /** Whether picking a Home background photo also sets it as the lock screen wallpaper. */
+    val syncLockScreenWallpaper: Flow<Boolean> = context.dataStore.data.map { it[Keys.SYNC_LOCK_SCREEN_WALLPAPER] ?: true }
+
+    suspend fun setSyncLockScreenWallpaper(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.SYNC_LOCK_SCREEN_WALLPAPER] = enabled }
+    }
+
+    // ---------- Milestone / target (next mock test goal) ----------
+
+    val milestoneTarget: Flow<MilestoneTarget> = context.dataStore.data.map { prefs ->
+        prefs[Keys.MILESTONE_TARGET]
+            ?.let { runCatching { json.decodeFromString<MilestoneTarget>(it) }.getOrNull() }
+            ?: MilestoneTarget()
+    }
+
+    suspend fun setMilestoneTarget(target: MilestoneTarget) {
+        context.dataStore.edit { it[Keys.MILESTONE_TARGET] = json.encodeToString(target) }
+    }
+
+    // ---------- App Shortcuts widget ----------
+
+    val appShortcuts: Flow<List<AppShortcutRef>> = context.dataStore.data.map { prefs ->
+        prefs[Keys.APP_SHORTCUTS]?.let { runCatching { json.decodeFromString<List<AppShortcutRef>>(it) }.getOrNull() } ?: emptyList()
+    }
+
+    suspend fun setAppShortcuts(shortcuts: List<AppShortcutRef>) {
+        context.dataStore.edit { it[Keys.APP_SHORTCUTS] = json.encodeToString(shortcuts) }
+    }
+
+    // ---------- Recent Apps deck (see RecentAppsOverlay) ----------
+
+    val recentApps: Flow<List<AppShortcutRef>> = context.dataStore.data.map { prefs ->
+        prefs[Keys.RECENT_APPS]?.let { runCatching { json.decodeFromString<List<AppShortcutRef>>(it) }.getOrNull() } ?: emptyList()
+    }
+
+    /** Moves [ref] to the front of the recency list (or inserts it), trimmed to [MAX_RECENT_APPS]. */
+    suspend fun recordAppLaunch(ref: AppShortcutRef) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.RECENT_APPS]
+                ?.let { runCatching { json.decodeFromString<List<AppShortcutRef>>(it) }.getOrNull() }
+                ?: emptyList()
+            val updated = (listOf(ref) + current.filterNot { it == ref }).take(MAX_RECENT_APPS)
+            prefs[Keys.RECENT_APPS] = json.encodeToString(updated)
+        }
+    }
+
+    suspend fun removeFromRecentApps(ref: AppShortcutRef) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.RECENT_APPS]
+                ?.let { runCatching { json.decodeFromString<List<AppShortcutRef>>(it) }.getOrNull() }
+                ?: emptyList()
+            prefs[Keys.RECENT_APPS] = json.encodeToString(current.filterNot { it == ref })
+        }
+    }
+
+    // ---------- App Drawer categories ----------
+
+    /** Package name -> [AppCategory]. Any app missing from this map is [AppCategory.OTHER]. */
+    val appCategories: Flow<Map<String, AppCategory>> = context.dataStore.data.map { prefs ->
+        prefs[Keys.APP_CATEGORIES]
+            ?.let { runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
+            ?.mapValues { (_, value) -> AppCategory.fromStorageValue(value) }
+            ?: emptyMap()
+    }
+
+    suspend fun setAppCategory(packageName: String, category: AppCategory) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.APP_CATEGORIES]
+                ?.let { runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
+                ?.toMutableMap() ?: mutableMapOf()
+            if (category == AppCategory.OTHER) current.remove(packageName) else current[packageName] = category.name
+            prefs[Keys.APP_CATEGORIES] = json.encodeToString(current as Map<String, String>)
+        }
+    }
+
+    // ---------- Double-tap to lock ----------
+
+    val lockOnDoubleTap: Flow<Boolean> = context.dataStore.data.map { it[Keys.LOCK_ON_DOUBLE_TAP] ?: false }
+
+    suspend fun setLockOnDoubleTap(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.LOCK_ON_DOUBLE_TAP] = enabled }
     }
 }

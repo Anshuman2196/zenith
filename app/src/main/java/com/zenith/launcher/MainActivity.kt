@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -12,12 +13,18 @@ import com.zenith.launcher.ui.ViewModelFactory
 import com.zenith.launcher.ui.navigation.LauncherNavHost
 import com.zenith.launcher.ui.settings.SettingsViewModel
 import com.zenith.launcher.ui.theme.ZenithLauncherTheme
+import com.zenith.launcher.util.DefaultLauncherHelper
 
 /**
  * Single-activity entry point. Because this app is registered as HOME (see manifest), the
  * system starts this Activity on every "go to home screen" action - avoid heavy onCreate work.
  */
 class MainActivity : ComponentActivity() {
+
+    // Must be registered unconditionally before STARTED, per the Activity Result API's rules -
+    // actually prompting only happens once, from onCreate, via DefaultLauncherHelper.
+    private val defaultLauncherRoleRequest =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { /* no-op either way */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,6 +34,10 @@ class MainActivity : ComponentActivity() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { /* intentionally no-op */ }
         })
+
+        // Once per cold start rather than on every onResume, so this doesn't nag every single
+        // time the user returns to Home if they dismiss the system prompt without acting on it.
+        DefaultLauncherHelper.requestIfNeeded(this, defaultLauncherRoleRequest)
 
         val container = (application as LauncherApplication).container
         val factory = ViewModelFactory(container)

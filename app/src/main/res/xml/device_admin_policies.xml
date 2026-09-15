@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Deliberately empty: this app only needs to BE a device admin to call
+    DevicePolicyManager#lockNow() - it doesn't request any of the actual policy capabilities
+    (password rules, wipe, camera disable, etc.) that admin apps can otherwise ask for.
+-->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies />
+</device-admin>

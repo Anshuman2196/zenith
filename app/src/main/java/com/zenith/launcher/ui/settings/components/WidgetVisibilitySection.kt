@@ -29,6 +29,9 @@ fun WidgetVisibilitySection(
         ToggleRow("Chapter Backlog", visibility.chapterBacklogEnabled) { checked -> onChange { it.copy(chapterBacklogEnabled = checked) } }
         ToggleRow("Quick PDF Launcher", visibility.pdfLauncherEnabled) { checked -> onChange { it.copy(pdfLauncherEnabled = checked) } }
         ToggleRow("Focus Mode Toggle", visibility.focusModeEnabled) { checked -> onChange { it.copy(focusModeEnabled = checked) } }
+        ToggleRow("Milestone Target", visibility.milestoneEnabled) { checked -> onChange { it.copy(milestoneEnabled = checked) } }
+        ToggleRow("App Shortcuts", visibility.appShortcutsEnabled) { checked -> onChange { it.copy(appShortcutsEnabled = checked) } }
+        ToggleRow("Status (Wi-Fi / Battery / Bluetooth)", visibility.systemStatusEnabled) { checked -> onChange { it.copy(systemStatusEnabled = checked) } }
     }
 }
 

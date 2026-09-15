@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Zenith Launcher</string>
+    <string name="device_admin_description">Lets Zenith Launcher lock your screen when you double-tap Home - it can\'t do anything else with this permission (no wiping data, no password changes).</string>
 </resources>

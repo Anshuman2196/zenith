@@ -2,6 +2,7 @@ package com.zenith.launcher.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zenith.launcher.data.model.AppCategory
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ExamSettings
@@ -26,9 +27,12 @@ data class SettingsUiState(
     val availableIconPacks: List<IconPackInfo> = emptyList(),
     val selectedIconPack: String? = null,
     val widgetVisibility: WidgetVisibility = WidgetVisibility(),
-    val installedApps: List<AppInfo> = emptyList(), // used by the Focus Mode app picker
+    val installedApps: List<AppInfo> = emptyList(), // used by the Focus Mode app picker + App Categories
     val focusAllowedApps: Set<String> = emptySet(),
-    val background: BackgroundSettings = BackgroundSettings()
+    val background: BackgroundSettings = BackgroundSettings(),
+    val syncLockScreenWallpaper: Boolean = true,
+    val lockOnDoubleTap: Boolean = false,
+    val appCategories: Map<String, AppCategory> = emptyMap()
 )
 
 class SettingsViewModel(
@@ -64,7 +68,10 @@ class SettingsViewModel(
         settingsRepository.widgetVisibility,
         _installedApps,
         settingsRepository.focusAllowedApps,
-        settingsRepository.backgroundSettings
+        settingsRepository.backgroundSettings,
+        settingsRepository.syncLockScreenWallpaper,
+        settingsRepository.lockOnDoubleTap,
+        settingsRepository.appCategories
     ) { array ->
         SettingsUiState(
             profileName = array[0] as String,
@@ -76,7 +83,11 @@ class SettingsViewModel(
             widgetVisibility = array[6] as WidgetVisibility,
             installedApps = array[7] as List<AppInfo>,
             focusAllowedApps = array[8] as Set<String>,
-            background = array[9] as BackgroundSettings
+            background = array[9] as BackgroundSettings,
+            syncLockScreenWallpaper = array[10] as Boolean,
+            lockOnDoubleTap = array[11] as Boolean,
+            @Suppress("UNCHECKED_CAST")
+            appCategories = array[12] as Map<String, AppCategory>
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
 
@@ -84,8 +95,7 @@ class SettingsViewModel(
     fun updateProfileName(name: String) = viewModelScope.launch { settingsRepository.setProfileName(name) }
 
     // ---------- Exam dates ----------
-    fun updateJeeMainDate(epochMillis: Long?) = viewModelScope.launch { settingsRepository.setJeeMainDate(epochMillis) }
-    fun updateJeeAdvancedDate(epochMillis: Long?) = viewModelScope.launch { settingsRepository.setJeeAdvancedDate(epochMillis) }
+    fun setExamSettings(settings: ExamSettings) = viewModelScope.launch { settingsRepository.setExamSettings(settings) }
 
     // ---------- Theme ----------
     fun setDarkMode(enabled: Boolean) = viewModelScope.launch { settingsRepository.setDarkMode(enabled) }
@@ -111,6 +121,9 @@ class SettingsViewModel(
     // ---------- Background customization ----------
     fun setBackgroundImage(uriString: String?) = viewModelScope.launch {
         settingsRepository.setBackgroundImageUri(uriString)
+        if (uriString != null) {
+            appRepository.syncWallpaper(uriString, alsoLockScreen = uiState.value.syncLockScreenWallpaper)
+        }
     }
 
     fun setBackgroundColor(argb: Long?) = viewModelScope.launch {
@@ -118,4 +131,19 @@ class SettingsViewModel(
     }
 
     fun resetBackground() = viewModelScope.launch { settingsRepository.clearBackground() }
+
+    fun setSyncLockScreenWallpaper(enabled: Boolean) = viewModelScope.launch {
+        settingsRepository.setSyncLockScreenWallpaper(enabled)
+        // Re-apply immediately so toggling this on retroactively covers whatever photo is
+        // already selected, instead of only taking effect the next time one is picked.
+        uiState.value.background.imageUri?.let { appRepository.syncWallpaper(it, alsoLockScreen = enabled) }
+    }
+
+    // ---------- Double-tap to lock ----------
+    fun setLockOnDoubleTap(enabled: Boolean) = viewModelScope.launch { settingsRepository.setLockOnDoubleTap(enabled) }
+
+    // ---------- App Drawer categories ----------
+    fun setAppCategory(packageName: String, category: AppCategory) = viewModelScope.launch {
+        settingsRepository.setAppCategory(packageName, category)
+    }
 }

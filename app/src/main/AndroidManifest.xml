@@ -9,6 +9,18 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!-- System Status widget: Wi-Fi connectivity state. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Syncing the chosen background photo to the actual Home/Lock screen wallpaper. -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+
+    <!-- System Status widget: name of a connected Bluetooth device (and its battery level, best
+         effort - there's no public API for that, see SystemStatusWidget.kt). BLUETOOTH_CONNECT
+         is the runtime permission on API 31+; plain BLUETOOTH covers older versions. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
     <application
         android:name=".LauncherApplication"
         android:allowBackup="true"
@@ -31,5 +43,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- See ZenithDeviceAdminReceiver: exists only for the double-tap-to-lock gesture. -->
+        <receiver
+            android:name=".service.ZenithDeviceAdminReceiver"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin_policies" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

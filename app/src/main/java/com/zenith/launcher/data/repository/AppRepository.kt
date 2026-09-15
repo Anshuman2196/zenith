@@ -83,4 +83,31 @@ class AppRepository(private val context: Context) {
         }
         runCatching { context.startActivity(intent) }
     }
+
+    /**
+     * Kicks off the system's normal uninstall confirmation dialog for [packageName] - same
+     * result as long-pressing an icon and dragging to "Uninstall" on a stock launcher. This app
+     * never uninstalls anything itself; Android always shows its own confirmation UI first.
+     */
+    fun uninstallApp(packageName: String) {
+        val intent = Intent(Intent.ACTION_DELETE).apply {
+            data = android.net.Uri.parse("package:$packageName")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        runCatching { context.startActivity(intent) }
+    }
+
+    /** Opens an app's system "App info" page - used by the drawer's long-press menu. */
+    fun openAppInfo(packageName: String) {
+        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = android.net.Uri.parse("package:$packageName")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        runCatching { context.startActivity(intent) }
+    }
+
+    /** Runs the (blocking, bitmap-decoding) wallpaper sync off the main thread. */
+    suspend fun syncWallpaper(uriString: String, alsoLockScreen: Boolean) = withContext(Dispatchers.IO) {
+        com.zenith.launcher.util.WallpaperSyncHelper.apply(context, android.net.Uri.parse(uriString), alsoLockScreen)
+    }
 }

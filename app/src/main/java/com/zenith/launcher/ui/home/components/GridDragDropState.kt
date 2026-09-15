@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
@@ -17,21 +18,29 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
 
 /**
- * Powers hold-and-drag reordering across the Home screen's 3-column widget grid - the same
- * interaction the stock Android home screen uses to move a widget: long-press it, drag it
- * anywhere (including into another column), drop it in its new spot.
+ * Powers hold-and-drag reordering across the Home screen's 3-column widget grid, matching the
+ * stock Android home screen's "lock, then hold-to-unlock-and-move" model: widgets are normal and
+ * un-draggable until a long-press picks one up, which also flips [editMode] on for the rest of
+ * the grid (see [HomeScreen]) so the whole screen dedicates itself to rearranging - taps, the
+ * app-drawer edge-swipe, etc. all pause - until the user explicitly finishes via
+ * [HomeScreen]'s "Done" affordance, tapping empty space, or the system back gesture.
  *
- * Unlike a single [androidx.compose.foundation.lazy.LazyColumn], a plain 3-column layout has no
- * built-in notion of "the item under my finger", so this class tracks every widget's on-screen
- * bounds (via [onGloballyPositioned]) and every column's bounds, and does its own hit-testing
- * each time the finger moves: the nearest column by horizontal center decides *which* column,
- * and how many of that column's other widgets sit above the finger decides *what index*.
+ * ## Why the dragged item is a floating "ghost", not an in-place offset
+ * An earlier version of this class rendered the dragged item in-place and tried to compensate
+ * for it having already jumped to a new column/index (because the backing order changes live as
+ * you drag past other widgets) by comparing the item's bounds *before* and *after* that jump.
+ * That comparison read [itemBounds] - a snapshot updated by [onGloballyPositioned], which only
+ * fires once the *next* layout pass finishes - while the pointer-tracking coroutine below runs
+ * every raw pointer-move event, effectively one tick ahead of it. The result was a one-frame
+ * mismatch every time a reorder happened, which is often (every time the finger crosses a
+ * sibling), producing a visible jitter.
  *
- * [columns] and [onMove] are read through plain `var`s that [rememberGridDragDropState] refreshes
- * on every recomposition, rather than being captured once into a `remember`-cached lambda - a
- * lambda captured only at creation time would keep reading the widget arrangement from the
- * moment the drag state was first created, silently mis-computing every drop target after the
- * very first move.
+ * The fix used here sidesteps that race entirely: the dragged widget is rendered as a completely
+ * separate, absolutely-positioned "ghost" copy (see `DragGhostOverlay` in HomeScreen.kt) that
+ * tracks [dragPointerRoot] directly - nothing about its position depends on the grid's own live
+ * layout, so there's nothing for a layout-timing race to disturb. The *real* copy of the widget
+ * stays in the grid (so the grid still reflows correctly around it) but is invisible while
+ * dragging.
  */
 class GridDragDropState {
     /** Always the latest column arrangement - refreshed every recomposition. */
@@ -43,54 +52,58 @@ class GridDragDropState {
     private val itemBounds = mutableStateMapOf<String, Rect>()
     private val columnBounds = mutableStateMapOf<Int, Rect>()
 
+    /** True from the moment any widget is picked up until the user explicitly exits rearranging. */
+    var editMode by mutableStateOf(false)
+        private set
+
     var draggingId by mutableStateOf<String?>(null)
         private set
 
-    private var dragStartBounds: Rect? = null
-    private var draggedDelta by mutableStateOf(Offset.Zero)
-    private var pointerStartRoot = Offset.Zero
-    private var lastTarget: Pair<Int, Int>? = null
+    /** Root-space (screen) coordinates of the finger, updated on every pointer move while dragging. */
+    var dragPointerRoot by mutableStateOf(Offset.Zero)
+        private set
+
+    /** The dragged item's own on-screen size at the moment it was picked up, for sizing its ghost. */
+    var draggingItemSize by mutableStateOf<Size?>(null)
+        private set
 
     fun isDragging(id: String): Boolean = id == draggingId
+
+    /** Last known on-screen (root-space) bounds for widget [id], if it's been laid out yet. */
+    fun boundsOf(id: String): Rect? = itemBounds[id]
+
+    fun enterEditMode() {
+        editMode = true
+    }
+
+    /** Called by the "Done" pill, a tap on empty grid space, or the system back gesture. */
+    fun exitEditMode() {
+        editMode = false
+        onDragEnd()
+    }
 
     /** Called from every grid item's `onGloballyPositioned` to keep hit-testing data current. */
     fun reportItemBounds(id: String, bounds: Rect) {
         itemBounds[id] = bounds
     }
 
-    /** Last known on-screen (root-space) bounds for widget [id], if it's been laid out yet. */
-    fun boundsOf(id: String): Rect? = itemBounds[id]
-
     /** Called from every column container's `onGloballyPositioned`. */
     fun reportColumnBounds(column: Int, bounds: Rect) {
         columnBounds[column] = bounds
     }
 
-    /** How far (in px, x and y) the currently-dragged item should be visually offset. */
-    val draggingItemOffset: Offset
-        get() {
-            val id = draggingId ?: return Offset.Zero
-            val start = dragStartBounds ?: return Offset.Zero
-            val current = itemBounds[id] ?: return draggedDelta
-            // Compensate for the item having already jumped to a new slot mid-drag (because the
-            // backing order changed), so visually it still tracks the finger with no jump.
-            return (start.topLeft - current.topLeft) + draggedDelta
-        }
-
     fun onDragStart(id: String, pointerRoot: Offset) {
+        enterEditMode()
         draggingId = id
-        dragStartBounds = itemBounds[id]
-        draggedDelta = Offset.Zero
-        pointerStartRoot = pointerRoot
-        val column = columns.indexOfFirst { it.contains(id) }
-        lastTarget = if (column >= 0) column to columns[column].indexOf(id) else null
+        draggingItemSize = itemBounds[id]?.size
+        dragPointerRoot = pointerRoot
     }
 
     fun onDrag(delta: Offset) {
         if (draggingId == null) return
-        draggedDelta += delta
+        dragPointerRoot += delta
 
-        val pointer = pointerStartRoot + draggedDelta
+        val pointer = dragPointerRoot
         val targetColumn = columnBounds.entries
             .minByOrNull { (_, bounds) -> kotlin.math.abs(bounds.center.x - pointer.x) }
             ?.key ?: return
@@ -101,18 +114,16 @@ class GridDragDropState {
             otherId != id && (itemBounds[otherId]?.center?.y ?: Float.MAX_VALUE) < pointer.y
         }
 
-        val target = targetColumn to targetIndex
-        if (target != lastTarget) {
-            lastTarget = target
+        val fromColumn = columns.indexOfFirst { it.contains(id) }
+        val fromIndex = columns.getOrNull(fromColumn)?.indexOf(id) ?: -1
+        if (targetColumn != fromColumn || targetIndex != fromIndex) {
             onMove(id, targetColumn, targetIndex)
         }
     }
 
     fun onDragEnd() {
         draggingId = null
-        dragStartBounds = null
-        draggedDelta = Offset.Zero
-        lastTarget = null
+        draggingItemSize = null
     }
 }
 
@@ -137,9 +148,10 @@ fun Modifier.reportColumnBounds(state: GridDragDropState, column: Int): Modifier
     this.onGloballyPositioned { coordinates -> state.reportColumnBounds(column, coordinates.boundsInRoot()) }
 
 /**
- * Attach to a reorderable grid item (with its known widget [id]) to make it hold-and-draggable
- * across the whole 3-column grid. A short haptic tick fires on drag start so the affordance
- * feels the same as a real launcher's "pick up a widget" gesture.
+ * Attach to a reorderable grid item (with its known widget [id]) to make it hold-and-draggable.
+ * The very first long-press of any session also flips the whole grid into [GridDragDropState.editMode]
+ * (see the class doc) - a short haptic tick fires at that moment so picking a widget up feels the
+ * same as a real launcher's "pick up a widget" gesture.
  */
 @Composable
 fun Modifier.gridDragToReorder(state: GridDragDropState, id: String): Modifier {

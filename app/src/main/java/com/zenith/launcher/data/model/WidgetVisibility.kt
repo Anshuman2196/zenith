@@ -10,5 +10,8 @@ data class WidgetVisibility(
     val todoEnabled: Boolean = true,
     val chapterBacklogEnabled: Boolean = true,
     val pdfLauncherEnabled: Boolean = true,
-    val focusModeEnabled: Boolean = true
+    val focusModeEnabled: Boolean = true,
+    val milestoneEnabled: Boolean = true,
+    val appShortcutsEnabled: Boolean = true,
+    val systemStatusEnabled: Boolean = true
 )

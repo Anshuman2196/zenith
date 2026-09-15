@@ -1,10 +1,13 @@
 package com.zenith.launcher.data.repository
 
 import com.zenith.launcher.data.local.PreferencesManager
+import com.zenith.launcher.data.model.AppCategory
+import com.zenith.launcher.data.model.AppShortcutRef
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ChapterItem
 import com.zenith.launcher.data.model.ExamSettings
 import com.zenith.launcher.data.model.FontChoice
+import com.zenith.launcher.data.model.MilestoneTarget
 import com.zenith.launcher.data.model.PdfLink
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetVisibility
@@ -20,14 +23,16 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     suspend fun setProfileName(name: String) = prefs.setProfileName(name)
 
     val examSettings: Flow<ExamSettings> = prefs.examSettings
-    suspend fun setJeeMainDate(epochMillis: Long?) = prefs.setJeeMainDate(epochMillis)
-    suspend fun setJeeAdvancedDate(epochMillis: Long?) = prefs.setJeeAdvancedDate(epochMillis)
+    suspend fun setExamSettings(settings: ExamSettings) = prefs.setExamSettings(settings)
 
     val isDarkMode: Flow<Boolean> = prefs.isDarkMode
     suspend fun setDarkMode(enabled: Boolean) = prefs.setDarkMode(enabled)
 
     val fontChoice: Flow<FontChoice> = prefs.fontChoice
     suspend fun setFontChoice(choice: FontChoice) = prefs.setFontChoice(choice)
+
+    val customFontPath: Flow<String?> = prefs.customFontPath
+    suspend fun setCustomFontPath(path: String?) = prefs.setCustomFontPath(path)
 
     val iconPackPackage: Flow<String?> = prefs.iconPackPackage
     suspend fun setIconPackPackage(pkg: String?) = prefs.setIconPackPackage(pkg)
@@ -57,4 +62,23 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     suspend fun setBackgroundImageUri(uriString: String?) = prefs.setBackgroundImageUri(uriString)
     suspend fun setBackgroundColor(argb: Long?) = prefs.setBackgroundColor(argb)
     suspend fun clearBackground() = prefs.clearBackground()
+
+    val syncLockScreenWallpaper: Flow<Boolean> = prefs.syncLockScreenWallpaper
+    suspend fun setSyncLockScreenWallpaper(enabled: Boolean) = prefs.setSyncLockScreenWallpaper(enabled)
+
+    val recentApps: Flow<List<AppShortcutRef>> = prefs.recentApps
+    suspend fun recordAppLaunch(ref: AppShortcutRef) = prefs.recordAppLaunch(ref)
+    suspend fun removeFromRecentApps(ref: AppShortcutRef) = prefs.removeFromRecentApps(ref)
+
+    val milestoneTarget: Flow<MilestoneTarget> = prefs.milestoneTarget
+    suspend fun setMilestoneTarget(target: MilestoneTarget) = prefs.setMilestoneTarget(target)
+
+    val appShortcuts: Flow<List<AppShortcutRef>> = prefs.appShortcuts
+    suspend fun setAppShortcuts(shortcuts: List<AppShortcutRef>) = prefs.setAppShortcuts(shortcuts)
+
+    val appCategories: Flow<Map<String, AppCategory>> = prefs.appCategories
+    suspend fun setAppCategory(packageName: String, category: AppCategory) = prefs.setAppCategory(packageName, category)
+
+    val lockOnDoubleTap: Flow<Boolean> = prefs.lockOnDoubleTap
+    suspend fun setLockOnDoubleTap(enabled: Boolean) = prefs.setLockOnDoubleTap(enabled)
 }

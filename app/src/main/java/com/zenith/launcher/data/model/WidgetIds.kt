@@ -16,15 +16,21 @@ object WidgetIds {
     const val TODO = "todo"
     const val CHAPTER_BACKLOG = "chapter_backlog"
     const val PDF_LAUNCHER = "pdf_launcher"
+    const val MILESTONE = "milestone"
+    const val APP_SHORTCUTS = "app_shortcuts"
+    const val SYSTEM_STATUS = "system_status"
 
     /** Order a fresh install starts with; matches the layout in the reference design. */
     val DEFAULT_ORDER = listOf(
         COUNTDOWN,
         FOCUS_MODE,
+        MILESTONE,
         POMODORO,
         TODO,
         CHAPTER_BACKLOG,
-        PDF_LAUNCHER
+        PDF_LAUNCHER,
+        APP_SHORTCUTS,
+        SYSTEM_STATUS
     )
 
     /**
@@ -33,8 +39,8 @@ object WidgetIds {
      * than one flat list. This is the arrangement a fresh install starts with.
      */
     val DEFAULT_COLUMNS: List<List<String>> = listOf(
-        listOf(COUNTDOWN, FOCUS_MODE),
-        listOf(POMODORO),
-        listOf(TODO, CHAPTER_BACKLOG, PDF_LAUNCHER)
+        listOf(COUNTDOWN, FOCUS_MODE, MILESTONE),
+        listOf(POMODORO, SYSTEM_STATUS),
+        listOf(TODO, CHAPTER_BACKLOG, PDF_LAUNCHER, APP_SHORTCUTS)
     )
 }
