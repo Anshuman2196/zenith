@@ -73,7 +73,7 @@ fun HomeBackground(background: BackgroundSettings, content: @Composable BoxScope
             // Do not replace the phone's wallpaper with a launcher colour on first run. A custom
             // image or colour above remains an explicit opt-in override.
             val wallpaper by produceState<ImageBitmap?>(initialValue = null, key1 = context) {
-                value = runCatching { WallpaperManager.getInstance(context).drawable.toBitmap().asImageBitmap() }.getOrNull()
+                value = runCatching { WallpaperManager.getInstance(context).drawable?.toBitmap()?.asImageBitmap() }.getOrNull()
             }
             Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                 wallpaper?.let {
