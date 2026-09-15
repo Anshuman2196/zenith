@@ -5,6 +5,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import com.zenith.launcher.data.model.FontChoice
+import java.io.File
 
 private val DarkColors = darkColorScheme(
     primary = CalmBlue80,
@@ -32,11 +33,16 @@ private val LightColors = lightColorScheme(
 fun ZenithLauncherTheme(
     darkTheme: Boolean,
     fontChoice: FontChoice = FontChoice.DEFAULT,
+    customFontPath: String? = null,
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
         colorScheme = if (darkTheme) DarkColors else LightColors,
-        typography = appTypography(fontChoice.toFontFamily()),
+        typography = appTypography(customFontPath?.let(::fontFamilyFromPath) ?: fontChoice.toFontFamily()),
         content = content
     )
 }
+
+private fun fontFamilyFromPath(path: String): androidx.compose.ui.text.font.FontFamily? = runCatching {
+    if (File(path).isFile) androidx.compose.ui.text.font.FontFamily(android.graphics.Typeface.createFromFile(path)) else null
+}.getOrNull()

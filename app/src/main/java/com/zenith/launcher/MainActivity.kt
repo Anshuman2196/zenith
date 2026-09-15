@@ -54,8 +54,9 @@ class MainActivity : ComponentActivity() {
             val settingsViewModel: SettingsViewModel = viewModel(factory = factory)
             val isDarkMode by settingsViewModel.isDarkMode.collectAsState()
             val fontChoice by settingsViewModel.fontChoice.collectAsState()
+            val customFontPath by settingsViewModel.customFontPath.collectAsState()
 
-            ZenithLauncherTheme(darkTheme = isDarkMode, fontChoice = fontChoice) {
+            ZenithLauncherTheme(darkTheme = isDarkMode, fontChoice = fontChoice, customFontPath = customFontPath) {
                 LauncherNavHost(viewModelFactory = factory)
             }
         }

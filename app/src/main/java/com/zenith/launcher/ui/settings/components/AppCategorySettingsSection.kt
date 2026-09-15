@@ -3,6 +3,7 @@ package com.zenith.launcher.ui.settings.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -51,7 +52,8 @@ fun AppCategorySettingsSection(
     categories: Map<String, String>,
     categoryTypes: List<String>,
     onSetCategory: (packageName: String, String) -> Unit,
-    onAddCategory: (String) -> Unit
+    onAddCategory: (String) -> Unit,
+    showCard: Boolean = true
 ) {
     var query by remember { mutableStateOf("") }
     var newCategory by remember { mutableStateOf("") }
@@ -59,7 +61,7 @@ fun AppCategorySettingsSection(
         if (query.isBlank()) apps else apps.filter { it.label.contains(query, ignoreCase = true) }
     }
 
-    SettingsSectionCard(title = "App Categories") {
+    val content: @Composable ColumnScope.() -> Unit = {
         Text(
             "Group apps in the App Drawer by how you use them.",
             style = MaterialTheme.typography.labelSmall,
@@ -103,6 +105,11 @@ fun AppCategorySettingsSection(
                 )
             }
         }
+    }
+    if (showCard) {
+        SettingsSectionCard(title = "App Categories", content = content)
+    } else {
+        Column(content = content)
     }
 }
 

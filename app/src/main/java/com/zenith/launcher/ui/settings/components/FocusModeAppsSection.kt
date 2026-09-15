@@ -2,6 +2,8 @@ package com.zenith.launcher.ui.settings.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,13 +32,14 @@ import com.zenith.launcher.data.model.AppInfo
 fun FocusModeAppsSection(
     apps: List<AppInfo>,
     allowedPackages: Set<String>,
-    onToggleApp: (String) -> Unit
+    onToggleApp: (String) -> Unit,
+    showCard: Boolean = true
 ) {
     var query by remember { mutableStateOf("") }
     val filteredApps = remember(apps, query) {
         if (query.isBlank()) apps else apps.filter { it.label.contains(query, ignoreCase = true) }
     }
-    SettingsSectionCard(title = "Focus Mode - Allowed Apps") {
+    val content: @Composable ColumnScope.() -> Unit = {
         Text(
             "Pick the apps you want to stay usable while Focus Mode is on (e.g. calculator, notes). Everything else is hidden.",
             style = MaterialTheme.typography.labelSmall,
@@ -64,5 +67,10 @@ fun FocusModeAppsSection(
                 }
             }
         }
+    }
+    if (showCard) {
+        SettingsSectionCard(title = "Focus Mode - Allowed Apps", content = content)
+    } else {
+        Column(content = content)
     }
 }
