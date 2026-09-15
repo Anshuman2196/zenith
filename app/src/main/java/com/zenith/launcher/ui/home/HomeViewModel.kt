@@ -115,9 +115,9 @@ class HomeViewModel(
             allowedApps = array[5] as Set<String>,
             background = array[6] as BackgroundSettings,
             milestoneTarget = array[7] as MilestoneTarget,
-            @Suppress("UNCHECKED_CAST") appShortcutRefs = array[8] as List<AppShortcutRef>,
-            @Suppress("UNCHECKED_CAST") recentAppRefs = array[9] as List<AppShortcutRef>,
-            @Suppress("UNCHECKED_CAST") appCategories = array[10] as Map<String, AppCategory>,
+            appShortcutRefs = array[8] as List<AppShortcutRef>,
+            recentAppRefs = array[9] as List<AppShortcutRef>,
+            appCategories = array[10] as Map<String, AppCategory>,
             lockOnDoubleTap = array[11] as Boolean
         )
     }
