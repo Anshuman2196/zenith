@@ -13,6 +13,7 @@ import com.zenith.launcher.data.model.MilestoneTarget
 import com.zenith.launcher.data.model.PdfLink
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetVisibility
+import com.zenith.launcher.data.model.WidgetSize
 import com.zenith.launcher.data.repository.AppRepository
 import com.zenith.launcher.data.repository.SettingsRepository
 import com.zenith.launcher.util.CountdownUtil
@@ -20,7 +21,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -33,6 +36,7 @@ data class HomeUiState(
     val widgetVisibility: WidgetVisibility = WidgetVisibility(),
     /** The Home screen's 3-column grid arrangement - each entry is one column's ordered ids. */
     val widgetColumns: List<List<String>> = emptyList(),
+    val widgetSizes: Map<String, WidgetSize> = emptyMap(),
     val examCountdowns: List<ExamCountdown> = emptyList(),
     val todoItems: List<TodoItem> = emptyList(),
     val chapterItems: List<ChapterItem> = emptyList(),
@@ -45,7 +49,8 @@ data class HomeUiState(
     val appShortcuts: List<AppInfo> = emptyList(),
     /** Same resolution rule as [appShortcuts], newest-launched first. */
     val recentApps: List<AppInfo> = emptyList(),
-    val appCategories: Map<String, AppCategory> = emptyMap(),
+    val appCategories: Map<String, String> = emptyMap(),
+    val appCategoryTypes: List<String> = emptyList(),
     val lockOnDoubleTap: Boolean = false
 )
 
@@ -61,7 +66,9 @@ class HomeViewModel(
     private val _isLoadingApps = MutableStateFlow(true)
 
     init {
-        loadApps()
+        // Re-query immediately when the selected pack changes so both drawer and shortcuts use
+        // the new drawables in the same UI update, rather than waiting for a later resume.
+        viewModelScope.launch { settingsRepository.iconPackPackage.collect { loadApps() } }
     }
 
     /** Reloads installed apps, re-skinned with whichever icon pack is currently selected. */
@@ -79,95 +86,61 @@ class HomeViewModel(
         val exam: ExamSettings,
         val visibility: WidgetVisibility,
         val columns: List<List<String>>,
+        val sizes: Map<String, WidgetSize>,
         val focusActive: Boolean,
         val allowedApps: Set<String>,
         val background: BackgroundSettings,
         val milestoneTarget: MilestoneTarget,
         val appShortcutRefs: List<AppShortcutRef>,
         val recentAppRefs: List<AppShortcutRef>,
-        val appCategories: Map<String, AppCategory>,
+        val appCategories: Map<String, String>,
+        val appCategoryTypes: List<String>,
         val lockOnDoubleTap: Boolean
     )
 
-    private val baseState = combine(
-        settingsRepository.profileName,
-        settingsRepository.examSettings,
-        settingsRepository.widgetVisibility,
-        settingsRepository.widgetColumns,
-        settingsRepository.focusModeActive,
-        settingsRepository.focusAllowedApps,
-        settingsRepository.backgroundSettings,
-        settingsRepository.milestoneTarget,
-        settingsRepository.appShortcuts,
-        settingsRepository.recentApps,
-        settingsRepository.appCategories,
-        settingsRepository.lockOnDoubleTap
-    ) { array ->
-        BaseSettings(
-            name = array[0] as String,
-            exam = array[1] as ExamSettings,
-            visibility = array[2] as WidgetVisibility,
-            // Unchecked cast (as with every other field pulled out of this combine() array) -
-            // safe because settingsRepository.widgetColumns is the only Flow<List<List<String>>>
-            // fed into this combine call, always in this position.
-            columns = array[3] as List<List<String>>,
-            focusActive = array[4] as Boolean,
-            allowedApps = array[5] as Set<String>,
-            background = array[6] as BackgroundSettings,
-            milestoneTarget = array[7] as MilestoneTarget,
-            appShortcutRefs = array[8] as List<AppShortcutRef>,
-            recentAppRefs = array[9] as List<AppShortcutRef>,
-            appCategories = array[10] as Map<String, AppCategory>,
-            lockOnDoubleTap = array[11] as Boolean
-        )
-    }
+    private val baseState = settingsRepository.profileName.combine(settingsRepository.examSettings) { name, exam ->
+        BaseSettings(name, exam, WidgetVisibility(), emptyList(), emptyMap(), false, emptySet(),
+            BackgroundSettings(), MilestoneTarget(), emptyList(), emptyList(), emptyMap(), emptyList(), false)
+    }.combine(settingsRepository.widgetVisibility) { base, visibility -> base.copy(visibility = visibility) }
+        .combine(settingsRepository.widgetColumns) { base, columns -> base.copy(columns = columns) }
+        .combine(settingsRepository.widgetSizes) { base, sizes -> base.copy(sizes = sizes) }
+        .combine(settingsRepository.focusModeActive) { base, active -> base.copy(focusActive = active) }
+        .combine(settingsRepository.focusAllowedApps) { base, allowed -> base.copy(allowedApps = allowed) }
+        .combine(settingsRepository.backgroundSettings) { base, background -> base.copy(background = background) }
+        .combine(settingsRepository.milestoneTarget) { base, target -> base.copy(milestoneTarget = target) }
+        .combine(settingsRepository.appShortcuts) { base, shortcuts -> base.copy(appShortcutRefs = shortcuts) }
+        .combine(settingsRepository.recentApps) { base, recents -> base.copy(recentAppRefs = recents) }
+        .combine(settingsRepository.appCategories) { base, categories -> base.copy(appCategories = categories) }
+        .combine(settingsRepository.appCategoryTypes) { base, types -> base.copy(appCategoryTypes = types) }
+        .combine(settingsRepository.lockOnDoubleTap) { base, enabled -> base.copy(lockOnDoubleTap = enabled) }
 
-    val uiState: StateFlow<HomeUiState> = combine(
-        baseState,
-        _apps,
-        _isLoadingApps,
-        settingsRepository.todoList,
-        settingsRepository.chapterList,
-        settingsRepository.pdfList
-    ) { array ->
-        val base = array[0] as BaseSettings
-        val apps = array[1] as List<AppInfo>
-        val loading = array[2] as Boolean
-        val todos = array[3] as List<TodoItem>
-        val chapters = array[4] as List<ChapterItem>
-        val pdfs = array[5] as List<PdfLink>
+    private data class HomeContent(
+        val base: BaseSettings,
+        val apps: List<AppInfo> = emptyList(),
+        val loading: Boolean = true,
+        val todos: List<TodoItem> = emptyList(),
+        val chapters: List<ChapterItem> = emptyList(),
+        val pdfs: List<PdfLink> = emptyList()
+    )
 
-        // Focus Mode is an ALLOW-list: when active, only explicitly-allowed apps show up.
+    val uiState: StateFlow<HomeUiState> = baseState.combine(_apps) { base, apps -> HomeContent(base, apps = apps) }
+        .combine(_isLoadingApps) { content, loading -> content.copy(loading = loading) }
+        .combine(settingsRepository.todoList) { content, todos -> content.copy(todos = todos) }
+        .combine(settingsRepository.chapterList) { content, chapters -> content.copy(chapters = chapters) }
+        .combine(settingsRepository.pdfList) { content, pdfs -> content.copy(pdfs = pdfs) }
+        .map { content ->
+        val base = content.base
+        val apps = content.apps
         val visibleApps = if (base.focusActive) apps.filter { it.packageName in base.allowedApps } else apps
-
-        // Resolved live (not persisted) so a shortcut always shows the current icon-pack skin
-        // and label, and silently drops off if the app's since been uninstalled.
-        val resolvedShortcuts = base.appShortcutRefs.mapNotNull { ref ->
-            apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName }
-        }
-        val resolvedRecents = base.recentAppRefs.mapNotNull { ref ->
-            apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName }
-        }
-
+        val resolvedShortcuts = base.appShortcutRefs.mapNotNull { ref -> apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName } }
+        val resolvedRecents = base.recentAppRefs.mapNotNull { ref -> apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName } }
         HomeUiState(
-            greeting = buildGreeting(base.name),
-            apps = visibleApps,
-            widgetVisibility = base.visibility,
-            widgetColumns = base.columns,
-            examCountdowns = base.exam.exams.map { exam ->
-                ExamCountdown(id = exam.id, name = exam.name, daysLeft = exam.dateMillis?.let { CountdownUtil.daysRemaining(it) })
-            },
-            todoItems = todos,
-            chapterItems = chapters,
-            pdfLinks = pdfs,
-            isFocusModeActive = base.focusActive,
-            background = base.background,
-            isLoadingApps = loading,
-            milestoneTarget = base.milestoneTarget,
-            appShortcuts = resolvedShortcuts,
-            recentApps = resolvedRecents,
-            appCategories = base.appCategories,
-            lockOnDoubleTap = base.lockOnDoubleTap
+            greeting = buildGreeting(base.name), apps = visibleApps, widgetVisibility = base.visibility, widgetColumns = base.columns, widgetSizes = base.sizes,
+            examCountdowns = base.exam.exams.map { exam -> ExamCountdown(exam.id, exam.name, exam.dateMillis?.let { CountdownUtil.daysRemaining(it) }) },
+            todoItems = content.todos, chapterItems = content.chapters, pdfLinks = content.pdfs,
+            isFocusModeActive = base.focusActive, background = base.background, isLoadingApps = content.loading,
+            milestoneTarget = base.milestoneTarget, appShortcuts = resolvedShortcuts, recentApps = resolvedRecents,
+            appCategories = base.appCategories, appCategoryTypes = base.appCategoryTypes, lockOnDoubleTap = base.lockOnDoubleTap
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 
@@ -209,6 +182,11 @@ class HomeViewModel(
         target.add(toIndex.coerceIn(0, target.size), id)
 
         viewModelScope.launch { settingsRepository.setWidgetColumns(current) }
+    }
+
+    fun cycleWidgetSize(id: String) = viewModelScope.launch {
+        val current = uiState.value.widgetSizes[id] ?: WidgetSize.STANDARD
+        settingsRepository.setWidgetSize(id, current.next())
     }
 
     // ---------- Daily to-do ----------
@@ -274,7 +252,7 @@ class HomeViewModel(
     }
 
     // ---------- App Drawer categories ----------
-    fun setAppCategory(app: AppInfo, category: AppCategory) = viewModelScope.launch {
+    fun setAppCategory(app: AppInfo, category: String) = viewModelScope.launch {
         settingsRepository.setAppCategory(app.packageName, category)
     }
 

@@ -12,9 +12,6 @@ import com.zenith.launcher.service.ZenithDeviceAdminReceiver
  * requires the app to be an active Device Admin. This fails soft: if Device Admin isn't granted
  * yet, it walks the user through granting it instead of silently doing nothing.
  *
- * (Recent Apps used to be routed through an Accessibility Service calling into the system
- * Overview screen - that's gone now in favour of RecentAppsOverlay, a custom in-app deck styled
- * to match Home, which needs no special permission at all.)
  */
 object SystemActionsHelper {
 

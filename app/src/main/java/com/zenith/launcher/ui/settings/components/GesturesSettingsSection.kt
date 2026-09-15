@@ -16,14 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.zenith.launcher.util.SystemActionsHelper
 
-/**
- * Settings section for Home's system-integration gestures. Right now that's just double-tap to
- * lock, which needs Device Admin (the only way a launcher can call
- * [android.app.admin.DevicePolicyManager.lockNow]) - this row explains that and walks the user
- * through granting it. The left-edge swipe for Recent Apps needs no setup at all: it opens
- * Zenith's own Recent Apps deck (see RecentAppsOverlay), not the system Overview screen, so
- * there's no special permission to grant for it.
- */
+/** Settings section for Home's double-tap lock integration. Device Admin is required because it
+ * is the only public route for a launcher to call DevicePolicyManager.lockNow. */
 @Composable
 fun GesturesSettingsSection(lockOnDoubleTap: Boolean, onLockOnDoubleTapChange: (Boolean) -> Unit) {
     val context = LocalContext.current
@@ -59,11 +53,5 @@ fun GesturesSettingsSection(lockOnDoubleTap: Boolean, onLockOnDoubleTapChange: (
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        Text("Swipe right from the left edge of Home for Recent Apps", style = MaterialTheme.typography.bodyMedium)
-        Text(
-            "Opens Zenith's own Recent Apps deck - no extra permission needed.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

@@ -11,6 +11,7 @@ import com.zenith.launcher.data.model.MilestoneTarget
 import com.zenith.launcher.data.model.PdfLink
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetVisibility
+import com.zenith.launcher.data.model.WidgetSize
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -42,6 +43,8 @@ class SettingsRepository(private val prefs: PreferencesManager) {
 
     val widgetColumns: Flow<List<List<String>>> = prefs.widgetColumns
     suspend fun setWidgetColumns(columns: List<List<String>>) = prefs.setWidgetColumns(columns)
+    val widgetSizes: Flow<Map<String, WidgetSize>> = prefs.widgetSizes
+    suspend fun setWidgetSize(id: String, size: WidgetSize) = prefs.setWidgetSize(id, size)
 
     val todoList: Flow<List<TodoItem>> = prefs.todoList
     suspend fun setTodoList(items: List<TodoItem>) = prefs.setTodoList(items)
@@ -76,8 +79,10 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     val appShortcuts: Flow<List<AppShortcutRef>> = prefs.appShortcuts
     suspend fun setAppShortcuts(shortcuts: List<AppShortcutRef>) = prefs.setAppShortcuts(shortcuts)
 
-    val appCategories: Flow<Map<String, AppCategory>> = prefs.appCategories
-    suspend fun setAppCategory(packageName: String, category: AppCategory) = prefs.setAppCategory(packageName, category)
+    val appCategories: Flow<Map<String, String>> = prefs.appCategories
+    suspend fun setAppCategory(packageName: String, category: String) = prefs.setAppCategory(packageName, category)
+    val appCategoryTypes: Flow<List<String>> = prefs.appCategoryTypes
+    suspend fun addAppCategoryType(label: String) = prefs.addAppCategoryType(label)
 
     val lockOnDoubleTap: Flow<Boolean> = prefs.lockOnDoubleTap
     suspend fun setLockOnDoubleTap(enabled: Boolean) = prefs.setLockOnDoubleTap(enabled)

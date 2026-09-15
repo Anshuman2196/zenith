@@ -16,9 +16,4 @@ data class ExamTarget(
 
 /** Every exam the user is tracking, shown by the Home screen's Exam Countdown widget. */
 @Serializable
-data class ExamSettings(
-    val exams: List<ExamTarget> = listOf(
-        ExamTarget(id = "jee_main", name = "JEE Main"),
-        ExamTarget(id = "jee_advanced", name = "JEE Advanced")
-    )
-)
+data class ExamSettings(val exams: List<ExamTarget> = emptyList())

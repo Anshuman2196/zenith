@@ -51,7 +51,7 @@ private enum class SettingsCategory(val title: String, val subtitle: String, val
     PROFILE_EXAMS("Profile & Exams", "Your name and the exams you're tracking", Icons.Default.Person),
     APPEARANCE("Appearance", "Theme, font, icon pack, wallpaper", Icons.Default.Palette),
     WIDGETS("Widgets", "Choose what shows up on Home", Icons.Default.Widgets),
-    GESTURES("Gestures & System", "Lock screen, Recent Apps", Icons.Default.SwipeRight),
+    GESTURES("Gestures & System", "Lock screen and gestures", Icons.Default.SwipeRight),
     APPS("Apps", "Focus Mode and App Drawer categories", Icons.Default.Apps)
 }
 
@@ -156,7 +156,9 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     AppCategorySettingsSection(
                         apps = state.installedApps,
                         categories = state.appCategories,
-                        onSetCategory = viewModel::setAppCategory
+                        categoryTypes = state.appCategoryTypes,
+                        onSetCategory = viewModel::setAppCategory,
+                        onAddCategory = viewModel::addAppCategoryType
                     )
                 }
             }

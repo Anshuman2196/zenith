@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.zenith.launcher.data.model.AppCategory
+import com.zenith.launcher.data.model.defaultAppCategoryTypes
+import com.zenith.launcher.data.model.displayName
 import com.zenith.launcher.data.model.AppShortcutRef
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ChapterItem
@@ -17,6 +19,7 @@ import com.zenith.launcher.data.model.PdfLink
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetIds
 import com.zenith.launcher.data.model.WidgetVisibility
+import com.zenith.launcher.data.model.WidgetSize
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.decodeFromString
@@ -49,6 +52,7 @@ class PreferencesManager(private val context: Context) {
         val ICON_PACK_PACKAGE = stringPreferencesKey("icon_pack_package")
         val WIDGET_VISIBILITY = stringPreferencesKey("widget_visibility_json")
         val WIDGET_ORDER = stringPreferencesKey("widget_order_json")
+        val WIDGET_SIZES = stringPreferencesKey("widget_sizes_json")
         val TODO_LIST = stringPreferencesKey("todo_list_json")
         val CHAPTER_LIST = stringPreferencesKey("chapter_list_json")
         val PDF_LIST = stringPreferencesKey("pdf_list_json")
@@ -63,6 +67,7 @@ class PreferencesManager(private val context: Context) {
         val APP_SHORTCUTS = stringPreferencesKey("app_shortcuts_json")
         val RECENT_APPS = stringPreferencesKey("recent_apps_json")
         val APP_CATEGORIES = stringPreferencesKey("app_categories_json")
+        val APP_CATEGORY_TYPES = stringPreferencesKey("app_category_types_json")
         val LOCK_ON_DOUBLE_TAP = booleanPreferencesKey("lock_on_double_tap")
     }
 
@@ -157,6 +162,22 @@ class PreferencesManager(private val context: Context) {
 
     suspend fun setWidgetColumns(columns: List<List<String>>) {
         context.dataStore.edit { it[Keys.WIDGET_ORDER] = json.encodeToString(columns) }
+    }
+
+    val widgetSizes: Flow<Map<String, WidgetSize>> = context.dataStore.data.map { prefs ->
+        prefs[Keys.WIDGET_SIZES]
+            ?.let { runCatching { json.decodeFromString<Map<String, WidgetSize>>(it) }.getOrNull() }
+            ?: emptyMap()
+    }
+
+    suspend fun setWidgetSize(id: String, size: WidgetSize) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.WIDGET_SIZES]
+                ?.let { runCatching { json.decodeFromString<Map<String, WidgetSize>>(it) }.getOrNull() }
+                ?.toMutableMap() ?: mutableMapOf()
+            current[id] = size
+            prefs[Keys.WIDGET_SIZES] = json.encodeToString(current)
+        }
     }
 
     /** Distributes a flat widget order into 3 columns, i, i+3, i+6... in column i%3. */
@@ -318,20 +339,39 @@ class PreferencesManager(private val context: Context) {
 
     // ---------- App Drawer categories ----------
 
-    /** Package name -> [AppCategory]. Any app missing from this map is [AppCategory.OTHER]. */
-    val appCategories: Flow<Map<String, AppCategory>> = context.dataStore.data.map { prefs ->
+    /** Package name -> [AppCategory]. Any app missing from this map is [AppCategory.OTHER.displayName]. */
+    val appCategories: Flow<Map<String, String>> = context.dataStore.data.map { prefs ->
         prefs[Keys.APP_CATEGORIES]
             ?.let { runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
-            ?.mapValues { (_, value) -> AppCategory.fromStorageValue(value) }
+            ?.mapValues { (_, value) -> AppCategory.entries.firstOrNull { it.name == value }?.displayName ?: value }
             ?: emptyMap()
     }
 
-    suspend fun setAppCategory(packageName: String, category: AppCategory) {
+    /** User-defined labels extend the built-in drawer categories. */
+    val appCategoryTypes: Flow<List<String>> = context.dataStore.data.map { prefs ->
+        val saved = prefs[Keys.APP_CATEGORY_TYPES]
+            ?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
+            ?: emptyList()
+        (defaultAppCategoryTypes + saved).distinct()
+    }
+
+    suspend fun addAppCategoryType(label: String) {
+        val normalized = label.trim().replaceFirstChar { it.uppercase() }
+        if (normalized.isBlank() || normalized in defaultAppCategoryTypes) return
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.APP_CATEGORY_TYPES]
+                ?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
+                ?: emptyList()
+            prefs[Keys.APP_CATEGORY_TYPES] = json.encodeToString((current + normalized).distinct())
+        }
+    }
+
+    suspend fun setAppCategory(packageName: String, category: String) {
         context.dataStore.edit { prefs ->
             val current = prefs[Keys.APP_CATEGORIES]
                 ?.let { runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
                 ?.toMutableMap() ?: mutableMapOf()
-            if (category == AppCategory.OTHER) current.remove(packageName) else current[packageName] = category.name
+            if (category == AppCategory.OTHER.displayName) current.remove(packageName) else current[packageName] = category
             prefs[Keys.APP_CATEGORIES] = json.encodeToString(current as Map<String, String>)
         }
     }
