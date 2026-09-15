@@ -106,7 +106,13 @@ fun AppCategorySettingsSection(
             }
         }
     }
-    if (showCard) SettingsSectionCard(title = "App Categories", content = content) else content()
+    if (showCard) {
+        SettingsSectionCard(title = "App Categories", content = content)
+    } else {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            content()
+        }
+    }
 }
 
 @Composable
