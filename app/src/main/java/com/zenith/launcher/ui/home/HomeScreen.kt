@@ -258,7 +258,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                                     Modifier.blur(10.dp)
                                                 } else Modifier
                                             )
-                                            .height((state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160).coerceIn(96, 600).dp)
+                                            .height((state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160).coerceIn(88, 600).dp)
                                     ) {
                                         WidgetForId(
                                             id = id,
@@ -394,20 +394,30 @@ private fun WidgetResizeGrip(
 ) {
     Box(
         modifier = modifier
-            .size(28.dp)
-            .clip(RoundedCornerShape(topStart = 10.dp))
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f))
+            .size(44.dp)
+            .clip(RoundedCornerShape(topStart = 14.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.88f))
             .pointerInput(Unit) {
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
-                    if (kotlin.math.abs(dragAmount.y) > 8f) {
-                        onHeightDelta(if (dragAmount.y > 0) 24 else -24)
+                var accumulatedY = 0f
+                detectDragGestures(
+                    onDragStart = { accumulatedY = 0f },
+                    onDragEnd = {
+                        // Convert the complete gesture into 24dp steps once. This avoids
+                        // launching many concurrent DataStore writes from raw pointer events.
+                        val steps = (accumulatedY / 24f).toInt()
+                        if (steps != 0) onHeightDelta(steps * 24)
+                        accumulatedY = 0f
+                    },
+                    onDragCancel = { accumulatedY = 0f },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        accumulatedY += dragAmount.y
                     }
-                }
+                )
             },
         contentAlignment = Alignment.Center
     ) {
-        Text("↘", color = Color.White, style = MaterialTheme.typography.labelLarge)
+        Text("↕", color = Color.White, style = MaterialTheme.typography.titleMedium)
     }
 }
 

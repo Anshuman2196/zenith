@@ -27,4 +27,20 @@ val AppCategory.displayName: String
     }
 
 /** Built-in category labels. Users may add to these through Settings. */
-val defaultAppCategoryTypes: List<String> = AppCategory.entries.map { it.displayName }
+val defaultAppCategoryTypes: List<String> = listOf(
+    AppCategory.STUDY.displayName,
+    "Productivity",
+    "Communication",
+    AppCategory.SOCIAL.displayName,
+    AppCategory.ENTERTAINMENT.displayName,
+    AppCategory.GAMES.displayName,
+    "Media",
+    "Internet",
+    "Development",
+    "Finance",
+    "Shopping",
+    "Travel",
+    "News",
+    "Utilities",
+    AppCategory.OTHER.displayName
+)

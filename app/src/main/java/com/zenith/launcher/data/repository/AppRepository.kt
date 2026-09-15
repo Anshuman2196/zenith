@@ -30,6 +30,9 @@ class AppRepository(private val context: Context) {
                 val pkg = resolveInfo.activityInfo.packageName
                 val activityClass = resolveInfo.activityInfo.name
                 val label = resolveInfo.loadLabel(packageManager).toString()
+                val androidCategory = runCatching {
+                    packageManager.getApplicationInfo(pkg, 0).category
+                }.getOrDefault(ApplicationInfo.CATEGORY_UNDEFINED)
 
                 // Prefer the icon-pack's themed icon; fall back to the app's own icon.
                 val icon = iconPackHelper?.getIconFor(pkg, activityClass) ?: resolveInfo.loadIcon(packageManager)
@@ -39,7 +42,8 @@ class AppRepository(private val context: Context) {
                     activityClassName = activityClass,
                     label = label,
                     icon = icon,
-                    isSystemApp = isSystemApp(pkg)
+                    isSystemApp = isSystemApp(pkg),
+                    androidCategory = androidCategory
                 )
             }
             .distinctBy { it.packageName + it.activityClassName }

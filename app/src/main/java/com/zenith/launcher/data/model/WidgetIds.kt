@@ -40,15 +40,15 @@ object WidgetIds {
      */
     /** Initial heights (dp) tuned to the reference home-screen proportions. */
     val DEFAULT_HEIGHTS: Map<String, Int> = mapOf(
-        COUNTDOWN to 128,
-        FOCUS_MODE to 128,
-        MILESTONE to 190,
-        POMODORO to 500,
-        SYSTEM_STATUS to 190,
-        TODO to 240,
-        CHAPTER_BACKLOG to 220,
-        PDF_LAUNCHER to 190,
-        APP_SHORTCUTS to 160
+        COUNTDOWN to 112,
+        FOCUS_MODE to 112,
+        MILESTONE to 158,
+        POMODORO to 430,
+        SYSTEM_STATUS to 150,
+        TODO to 190,
+        CHAPTER_BACKLOG to 172,
+        PDF_LAUNCHER to 150,
+        APP_SHORTCUTS to 132
     )
 
     val DEFAULT_COLUMNS: List<List<String>> = listOf(

@@ -67,6 +67,8 @@ fun AppShortcutsWidget(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("App Shortcuts", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.width(12.dp))
+            AddShortcutTile(onClick = { showPicker = true }, compact = true)
         }
         Spacer(Modifier.height(8.dp))
 
@@ -82,9 +84,9 @@ fun AppShortcutsWidget(
             items(pinnedApps, key = { it.packageName + it.activityClassName }) { app ->
                 ShortcutIcon(app = app, onClick = { onLaunch(app) }, onLongClick = { onUnpin(app) })
             }
-            item(key = "__add__") {
-                AddShortcutTile(onClick = { showPicker = true })
-            }
+            // The add action is kept in the header so it never collides with shortcut labels.
+            // Keep the row solely for pinned apps.
+
         }
     }
 
@@ -124,18 +126,16 @@ private fun ShortcutIcon(app: AppInfo, onClick: () -> Unit, onLongClick: () -> U
 }
 
 @Composable
-private fun AddShortcutTile(onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(56.dp)) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Pin an app")
-        }
+private fun AddShortcutTile(onClick: () -> Unit, compact: Boolean = false) {
+    Box(
+        modifier = Modifier
+            .size(if (compact) 44.dp else 56.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(Icons.Default.Add, contentDescription = "Pin an app")
     }
 }
 

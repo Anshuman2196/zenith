@@ -70,6 +70,7 @@ class PreferencesManager(private val context: Context) {
         val RECENT_APPS = stringPreferencesKey("recent_apps_json")
         val APP_CATEGORIES = stringPreferencesKey("app_categories_json")
         val APP_CATEGORY_TYPES = stringPreferencesKey("app_category_types_json")
+        val APP_CATEGORY_AUTOFILL_VERSION = stringPreferencesKey("app_category_autofill_version")
         val LOCK_ON_DOUBLE_TAP = booleanPreferencesKey("lock_on_double_tap")
     }
 
@@ -184,7 +185,7 @@ class PreferencesManager(private val context: Context) {
 
     /** User-selected widget heights in dp; separate from legacy size presets for migration. */
     val widgetHeights: Flow<Map<String, Int>> = context.dataStore.data.map { prefs ->
-        if (prefs[Keys.WIDGET_HEIGHTS_VERSION] != "2") {
+        if (prefs[Keys.WIDGET_HEIGHTS_VERSION] != "3") {
             WidgetIds.DEFAULT_HEIGHTS
         } else {
             prefs[Keys.WIDGET_HEIGHTS]
@@ -195,11 +196,20 @@ class PreferencesManager(private val context: Context) {
 
     suspend fun setWidgetHeight(id: String, heightDp: Int) {
         context.dataStore.edit { prefs ->
-            val current = prefs[Keys.WIDGET_HEIGHTS]
-                ?.let { runCatching { json.decodeFromString<Map<String, Int>>(it) }.getOrNull() }
-                ?.toMutableMap() ?: mutableMapOf()
-            current[id] = heightDp.coerceIn(80, 600)
+            // Version 3 deliberately starts from the current reference defaults. Older installs
+            // may contain v2 heights, but those should not be resurrected when the new compact
+            // layout is introduced. Once the user resizes anything, their values are persisted.
+            val current = if (prefs[Keys.WIDGET_HEIGHTS_VERSION] == "3") {
+                prefs[Keys.WIDGET_HEIGHTS]
+                    ?.let { runCatching { json.decodeFromString<Map<String, Int>>(it) }.getOrNull() }
+                    ?.toMutableMap()
+                    ?: WidgetIds.DEFAULT_HEIGHTS.toMutableMap()
+            } else {
+                WidgetIds.DEFAULT_HEIGHTS.toMutableMap()
+            }
+            current[id] = heightDp.coerceIn(88, 600)
             prefs[Keys.WIDGET_HEIGHTS] = json.encodeToString(current)
+            prefs[Keys.WIDGET_HEIGHTS_VERSION] = "3"
         }
     }
 
@@ -410,8 +420,21 @@ class PreferencesManager(private val context: Context) {
             val current = prefs[Keys.APP_CATEGORIES]
                 ?.let { runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
                 ?.toMutableMap() ?: mutableMapOf()
-            defaults.forEach { (packageName, category) -> current.putIfAbsent(packageName, category) }
+
+            // One-time migration: apps that were previously dumped into "Other" get the
+            // improved automatic classification. Once migrated, manual category choices remain
+            // untouched, including a deliberate choice to use "Other".
+            val needsMigration = prefs[Keys.APP_CATEGORY_AUTOFILL_VERSION] != "2"
+            defaults.forEach { (packageName, category) ->
+                if (!current.containsKey(packageName) ||
+                    (needsMigration && current[packageName] == AppCategory.OTHER.displayName)
+                ) {
+                    current[packageName] = category
+                }
+            }
+
             prefs[Keys.APP_CATEGORIES] = json.encodeToString(current)
+            prefs[Keys.APP_CATEGORY_AUTOFILL_VERSION] = "2"
         }
     }
 

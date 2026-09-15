@@ -1,5 +1,6 @@
 package com.zenith.launcher.data.model
 
+import android.content.pm.ApplicationInfo
 import android.graphics.drawable.Drawable
 
 /**
@@ -13,5 +14,7 @@ data class AppInfo(
     val activityClassName: String,
     val label: String,
     val icon: Drawable,
-    val isSystemApp: Boolean = false
+    val isSystemApp: Boolean = false,
+    /** Android's coarse app category, used only as a fallback for automatic drawer grouping. */
+    val androidCategory: Int = ApplicationInfo.CATEGORY_UNDEFINED
 )

@@ -201,14 +201,99 @@ class HomeViewModel(
     }
 
 
-    /** Sensible first-run categorisation; users can freely change every assignment afterwards. */
+    /**
+     * Automatic drawer categorisation. It combines app labels/package names with Android's
+     * coarse application category so common apps do not fall into one giant "Other" bucket.
+     * "Other" is now only the final fallback for genuinely unclassifiable apps.
+     */
     private fun suggestedCategory(app: AppInfo): String {
         val identity = "${app.packageName} ${app.label}".lowercase()
+
         return when {
-            listOf("youtube", "netflix", "primevideo", "hotstar", "spotify", "music", "video", "tv").any(identity::contains) -> AppCategory.ENTERTAINMENT.displayName
-            listOf("whatsapp", "telegram", "instagram", "facebook", "snapchat", "discord", "messenger", "linkedin", "x.com", "twitter").any(identity::contains) -> AppCategory.SOCIAL.displayName
-            listOf("classroom", "meet", "zoom", "notion", "docs", "drive", "khan", "coursera", "unacademy", "byju", "physicswallah", "study", "exam", "learn").any(identity::contains) -> AppCategory.STUDY.displayName
-            listOf("game", "games", "supercell", "roblox", "minecraft", "pubg", "freefire").any(identity::contains) -> AppCategory.GAMES.displayName
+            // Study / education
+            listOf(
+                "allen", "classroom", "google drive", "onedrive", "drive", "docs", "sheets",
+                "slides", "notion", "khan", "coursera", "udemy", "unacademy", "byju",
+                "physicswallah", "pw", "doubtnut", "vedantu", "study", "exam", "learn",
+                "education", "quiz", "anki"
+            ).any(identity::contains) -> AppCategory.STUDY.displayName
+
+            // Social / communication
+            listOf(
+                "whatsapp", "telegram", "instagram", "facebook", "snapchat", "discord",
+                "messenger", "linkedin", "twitter", "x.com", "reddit", "threads",
+                "signal", "wechat", "skype"
+            ).any(identity::contains) -> AppCategory.SOCIAL.displayName
+
+            // Entertainment
+            listOf(
+                "youtube", "netflix", "primevideo", "prime video", "hotstar", "spotify",
+                "music", "video", "tv", "twitch", "jio cinema", "sonyliv", "mx player",
+                "vlc", "podcast"
+            ).any(identity::contains) -> AppCategory.ENTERTAINMENT.displayName
+
+            // Games
+            listOf(
+                "game", "games", "supercell", "roblox", "minecraft", "pubg", "bgmi",
+                "freefire", "free fire", "cod mobile", "call of duty", "clash of",
+                "brawl stars", "genshin"
+            ).any(identity::contains) -> AppCategory.GAMES.displayName
+
+            // Purpose-specific categories. These are built-in so the drawer stays useful
+            // without requiring the user to manually create categories.
+            listOf(
+                "gmail", "outlook", "mail", "email", "protonmail", "contacts",
+                "phone", "messages", "messaging", "sms"
+            ).any(identity::contains) -> "Communication"
+
+            listOf(
+                "camera", "gallery", "photos", "google photos", "lightroom", "snapseed",
+                "picsart", "image", "audio", "sound", "recorder", "gallery"
+            ).any(identity::contains) ||
+                app.androidCategory == android.content.pm.ApplicationInfo.CATEGORY_IMAGE ||
+                app.androidCategory == android.content.pm.ApplicationInfo.CATEGORY_AUDIO ||
+                app.androidCategory == android.content.pm.ApplicationInfo.CATEGORY_VIDEO -> "Media"
+
+            listOf(
+                "calculator", "calendar", "clock", "alarm", "timer", "notes", "keep",
+                "todo", "tasks", "weather", "device care", "cleaner", "files", "file manager",
+                "finder", "settings"
+            ).any(identity::contains) -> "Utilities"
+
+            listOf(
+                "chrome", "browser", "firefox", "brave", "edge", "opera", "internet",
+                "search", "duckduckgo"
+            ).any(identity::contains) -> "Internet"
+
+            listOf(
+                "github", "gitlab", "termux", "code", "ide", "developer", "android studio"
+            ).any(identity::contains) -> "Development"
+
+            listOf(
+                "amazon", "flipkart", "myntra", "meesho", "shop", "store", "ebay",
+                "etsy", "shopping"
+            ).any(identity::contains) -> "Shopping"
+
+            listOf(
+                "bank", "banking", "pay", "payment", "wallet", "upi", "phonepe",
+                "gpay", "google pay", "paytm", "cred"
+            ).any(identity::contains) -> "Finance"
+
+            listOf(
+                "maps", "map", "uber", "ola", "rapido", "metro", "flight", "travel",
+                "booking", "airbnb"
+            ).any(identity::contains) ||
+                app.androidCategory == android.content.pm.ApplicationInfo.CATEGORY_MAPS -> "Travel"
+
+            listOf(
+                "news", "newsstand", "times of india", "reddit"
+            ).any(identity::contains) -> "News"
+
+            // Android's own coarse category is useful when an app has an unfamiliar name.
+            app.androidCategory == android.content.pm.ApplicationInfo.CATEGORY_GAME -> AppCategory.GAMES.displayName
+            app.androidCategory == android.content.pm.ApplicationInfo.CATEGORY_SOCIAL -> AppCategory.SOCIAL.displayName
+            app.androidCategory == android.content.pm.ApplicationInfo.CATEGORY_PRODUCTIVITY -> "Productivity"
+
             else -> AppCategory.OTHER.displayName
         }
     }
