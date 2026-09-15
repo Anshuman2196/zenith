@@ -71,6 +71,6 @@ fun FocusModeAppsSection(
     if (showCard) {
         SettingsSectionCard(title = "Focus Mode - Allowed Apps", content = content)
     } else {
-        content()
+        Column(content = content)
     }
 }
