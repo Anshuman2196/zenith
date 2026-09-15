@@ -14,7 +14,7 @@ import com.zenith.launcher.R
 object TimerAlarmScheduler {
     private const val ACTION_TIMER_COMPLETE = "com.zenith.launcher.TIMER_COMPLETE"
     private const val EXTRA_MESSAGE = "message"
-    private const val REQUEST_CODE = 2401
+    internal const val REQUEST_CODE = 2401
 
     fun schedule(context: Context, seconds: Int, message: String) {
         val alarm = context.getSystemService(AlarmManager::class.java) ?: return
@@ -42,6 +42,6 @@ class TimerAlarmReceiver : BroadcastReceiver() {
             .setContentText(TimerAlarmScheduler.message(intent))
             .setAutoCancel(true)
             .build()
-        manager.notify(REQUEST_CODE, notification)
+        manager.notify(TimerAlarmScheduler.REQUEST_CODE, notification)
     }
 }
