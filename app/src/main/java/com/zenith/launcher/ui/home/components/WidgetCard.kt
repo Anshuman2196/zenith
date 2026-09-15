@@ -3,7 +3,7 @@ package com.zenith.launcher.ui.home.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,7 +46,7 @@ fun WidgetCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.(
         // outline, which reads as a normal flat card border instead of a pane of glass.
         border = BorderStroke(1.dp, Color.White.copy(alpha = if (isDarkSurface) 0.10f else 0.45f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxSize()
     ) {
         Column(modifier = Modifier.padding(16.dp), content = content)
     }

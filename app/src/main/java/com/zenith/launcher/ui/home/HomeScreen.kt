@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -259,7 +258,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                                     Modifier.blur(10.dp)
                                                 } else Modifier
                                             )
-                                            .heightIn(min = (state.widgetHeights[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160).dp)
+                                            .height((state.widgetHeights[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160).coerceIn(96, 600).dp)
                                     ) {
                                         WidgetForId(
                                             id = id,

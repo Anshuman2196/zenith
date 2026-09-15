@@ -9,7 +9,6 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,8 +17,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -92,13 +91,16 @@ fun AppDrawerOverlay(
         if (query.isBlank()) apps else apps.filter { it.label.contains(query, ignoreCase = true) }
     }
 
-    // Categories occupy the full available width.  A grid of category cards left large blank
-    // areas whenever neighbouring categories had different app counts.
     val groups = remember(filtered, categories, categoryTypes, query) {
-        if (query.isNotBlank()) listOf("Search results" to filtered)
-        else categoryTypes.map { type ->
-            type to filtered.filter { (categories[it.packageName] ?: AppCategory.OTHER.displayName) == type }
-        }.filter { it.second.isNotEmpty() }
+        if (query.isNotBlank()) {
+            listOf("Search results" to filtered)
+        } else {
+            categoryTypes.map { type ->
+                type to filtered.filter {
+                    (categories[it.packageName] ?: AppCategory.OTHER.displayName) == type
+                }
+            }.filter { it.second.isNotEmpty() }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -113,31 +115,44 @@ fun AppDrawerOverlay(
                     }
                 }
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Drag handle - swiping right anywhere below it also closes the drawer.
-                Box(
-                    modifier = Modifier
-                        .padding(top = 10.dp)
-                        .align(Alignment.CenterHorizontally)
-                        .size(width = 40.dp, height = 4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(Color.White.copy(alpha = 0.4f))
-                )
+            androidx.compose.foundation.layout.BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp)
+            ) {
+                val twoColumns = maxWidth >= 700.dp
+                val leftGroups = if (twoColumns) groups.filterIndexed { index, _ -> index % 2 == 0 } else groups
+                val rightGroups = if (twoColumns) groups.filterIndexed { index, _ -> index % 2 == 1 } else emptyList()
 
-                DrawerSearchBar(query = query, onQueryChange = { query = it }, onClose = onDismiss)
+                Column(modifier = Modifier.fillMaxSize()) {
+                    DrawerSearchBar(
+                        query = query,
+                        onQueryChange = { query = it },
+                        onClose = onDismiss
+                    )
 
-                LazyColumn(
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(groups, key = { it.first }) { (category, appsInCategory) ->
-                        DrawerCategoryCard(
-                            category = category,
-                            apps = appsInCategory,
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(top = 8.dp, bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(if (twoColumns) 16.dp else 0.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        DrawerCategoryColumn(
+                            groups = leftGroups,
                             onLaunch = onLaunch,
-                            onLongClick = { menuApp = it }
+                            onLongClick = { menuApp = it },
+                            modifier = Modifier.weight(1f)
                         )
+                        if (twoColumns) {
+                            DrawerCategoryColumn(
+                                groups = rightGroups,
+                                onLaunch = onLaunch,
+                                onLongClick = { menuApp = it },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
@@ -161,6 +176,28 @@ fun AppDrawerOverlay(
 }
 
 @Composable
+private fun DrawerCategoryColumn(
+    groups: List<Pair<String, List<AppInfo>>>,
+    onLaunch: (AppInfo) -> Unit,
+    onLongClick: (AppInfo) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        groups.forEach { (category, appsInCategory) ->
+            DrawerCategoryCard(
+                category = category,
+                apps = appsInCategory,
+                onLaunch = onLaunch,
+                onLongClick = onLongClick
+            )
+        }
+    }
+}
+
+@Composable
 private fun DrawerCategoryCard(
     category: String,
     apps: List<AppInfo>,
@@ -168,21 +205,42 @@ private fun DrawerCategoryCard(
     onLongClick: (AppInfo) -> Unit
 ) {
     Column {
-        Text(category, style = MaterialTheme.typography.titleMedium, color = Color.White, modifier = Modifier.padding(start = 8.dp, bottom = 6.dp))
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color.White.copy(alpha = 0.12f))
-                .padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+        Text(
+            text = category,
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.White,
+            modifier = Modifier.padding(start = 6.dp, bottom = 6.dp)
+        )
+        androidx.compose.material3.Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.58f),
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
+            elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 0.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            apps.chunked(3).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
-                    row.forEach { app ->
-                        Box(Modifier.weight(1f)) { DrawerAppIconCell(app, { onLaunch(app) }, { onLongClick(app) }) }
+            Column(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                apps.chunked(3).forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        row.forEach { app ->
+                            Box(Modifier.weight(1f)) {
+                                DrawerAppIconCell(
+                                    app = app,
+                                    onClick = { onLaunch(app) },
+                                    onLongClick = { onLongClick(app) }
+                                )
+                            }
+                        }
+                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                     }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
@@ -194,28 +252,44 @@ private fun DrawerSearchBar(query: String, onQueryChange: (String) -> Unit, onCl
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.White.copy(alpha = 0.14f))
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(top = 12.dp, bottom = 4.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color.White.copy(alpha = 0.12f))
+            .padding(start = 14.dp, end = 4.dp, top = 7.dp, bottom = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.8f))
-        Spacer(Modifier.width(8.dp))
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.72f)
+        )
+        Spacer(Modifier.width(9.dp))
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
-                Text("Search apps", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.7f))
+                Text(
+                    "Search for Apps in Zenith",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White.copy(alpha = 0.55f)
+                )
             }
             BasicTextField(
                 value = query,
                 onValueChange = onQueryChange,
                 singleLine = true,
-                textStyle = TextStyle(color = Color.White, fontSize = MaterialTheme.typography.bodyLarge.fontSize),
-                cursorBrush = SolidColor(Color.White)
+                textStyle = TextStyle(
+                    color = Color.White,
+                    fontSize = MaterialTheme.typography.bodyLarge.fontSize
+                ),
+                cursorBrush = SolidColor(Color.White),
+                modifier = Modifier.fillMaxWidth()
             )
         }
         IconButton(onClick = onClose) {
-            Icon(Icons.Default.Close, contentDescription = "Close app drawer", tint = Color.White)
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Close app drawer",
+                tint = Color.White.copy(alpha = 0.82f)
+            )
         }
     }
 }
@@ -227,27 +301,28 @@ private fun DrawerAppIconCell(app: AppInfo, onClick: () -> Unit, onLongClick: ()
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            // The category card is the visual surface. Keeping its children transparent mirrors
-            // the reference's uncluttered, grouped icon board rather than nesting cards.
             .clip(RoundedCornerShape(14.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-            .padding(vertical = 10.dp, horizontal = 4.dp)
+            .padding(vertical = 9.dp, horizontal = 3.dp)
     ) {
         Image(
-            bitmap = remember(app.packageName, app.activityClassName) { app.icon.toBitmap().asImageBitmap() },
+            bitmap = remember(app.packageName, app.activityClassName) {
+                app.icon.toBitmap().asImageBitmap()
+            },
             contentDescription = app.label,
             modifier = Modifier
-                .size(52.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .size(48.dp)
+                .clip(RoundedCornerShape(14.dp))
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(5.dp))
         Text(
             text = app.label,
             style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
-            color = Color.White
+            color = Color.White,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }
