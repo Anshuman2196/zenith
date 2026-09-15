@@ -1,6 +1,5 @@
 package com.zenith.launcher.ui.home.components
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,26 +24,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.MilestoneTarget
-import com.zenith.launcher.util.CountdownUtil
-import kotlin.math.roundToInt
 
 /**
  * Widget: "Milestone Target" - the aspirant's self-set goal for their next big mock test. Shows
- * the target score, an arc gauge for how close their last mock score got them there, and (if a
- * test date is set) a days-left hint. Tap the pencil to edit any of it.
+ * the test name and target score. Tap the pencil to edit them.
  */
 @Composable
 fun MilestoneWidget(target: MilestoneTarget, onChange: (MilestoneTarget) -> Unit) {
     var showEditDialog by remember { mutableStateOf(false) }
-    val daysLeft = target.nextTestDateMillis?.let { CountdownUtil.daysRemaining(it) }
-
     WidgetCard {
         MilestoneHeaderRow(target = target, onEditClick = { showEditDialog = true })
         Spacer(Modifier.height(4.dp))
@@ -59,19 +49,6 @@ fun MilestoneWidget(target: MilestoneTarget, onChange: (MilestoneTarget) -> Unit
                 "Target: ${target.targetScore}/${target.maxScore}",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.height(8.dp))
-            ReadinessGauge(readiness = target.readiness)
-            Spacer(Modifier.height(8.dp))
-            val summary = buildString {
-                append(if (target.lastScore != null) "Last Mock Score: ${target.lastScore}" else "No mock scores logged yet")
-                if (daysLeft != null) append(" | Next Test: $daysLeft Days")
-            }
-            Text(
-                summary,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
             )
         }
     }
@@ -99,47 +76,6 @@ private fun MilestoneHeaderRow(target: MilestoneTarget, onEditClick: () -> Unit)
     }
 }
 
-/** A ~270-degree arc gauge (matches the reference design) showing readiness as a percentage. */
-@Composable
-private fun ReadinessGauge(readiness: Float) {
-    val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-    val progressColor = MaterialTheme.colorScheme.primary
-
-    Box(modifier = Modifier.size(120.dp), contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.size(120.dp).rotate(135f)) {
-            val stroke = Stroke(width = 12.dp.toPx(), cap = StrokeCap.Round)
-            val sweep = 270f
-            val inset = stroke.width / 2
-            drawArc(
-                color = trackColor,
-                startAngle = 0f,
-                sweepAngle = sweep,
-                useCenter = false,
-                topLeft = androidx.compose.ui.geometry.Offset(inset, inset),
-                size = Size(size.width - stroke.width, size.height - stroke.width),
-                style = stroke
-            )
-            drawArc(
-                color = progressColor,
-                startAngle = 0f,
-                sweepAngle = sweep * readiness,
-                useCenter = false,
-                topLeft = androidx.compose.ui.geometry.Offset(inset, inset),
-                size = Size(size.width - stroke.width, size.height - stroke.width),
-                style = stroke
-            )
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("${(readiness * 100).roundToInt()}%", style = MaterialTheme.typography.headlineMedium)
-            Text(
-                "Prep Readiness",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
 @Composable
 private fun EditMilestoneDialog(
     target: MilestoneTarget,
@@ -149,7 +85,6 @@ private fun EditMilestoneDialog(
     var testName by remember { mutableStateOf(target.testName) }
     var targetScore by remember { mutableStateOf(target.targetScore.toString()) }
     var maxScore by remember { mutableStateOf(target.maxScore.toString()) }
-    var lastScore by remember { mutableStateOf(target.lastScore?.toString() ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -171,11 +106,6 @@ private fun EditMilestoneDialog(
                     label = { Text("Max possible score") }, singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
-                    value = lastScore, onValueChange = { lastScore = it.filter(Char::isDigit) },
-                    label = { Text("Your last mock score (optional)") }, singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
         },
         confirmButton = {
@@ -185,7 +115,6 @@ private fun EditMilestoneDialog(
                         testName = testName.ifBlank { "Comprehensive Mock Test" },
                         targetScore = targetScore.toIntOrNull() ?: target.targetScore,
                         maxScore = maxScore.toIntOrNull() ?: target.maxScore,
-                        lastScore = lastScore.toIntOrNull()
                     )
                 )
             }) { Text("Save") }

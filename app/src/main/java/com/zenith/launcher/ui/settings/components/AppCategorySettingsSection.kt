@@ -18,7 +18,9 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,10 +48,13 @@ import com.zenith.launcher.data.model.displayName
 @Composable
 fun AppCategorySettingsSection(
     apps: List<AppInfo>,
-    categories: Map<String, AppCategory>,
-    onSetCategory: (packageName: String, AppCategory) -> Unit
+    categories: Map<String, String>,
+    categoryTypes: List<String>,
+    onSetCategory: (packageName: String, String) -> Unit,
+    onAddCategory: (String) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
+    var newCategory by remember { mutableStateOf("") }
     val filtered = remember(apps, query) {
         if (query.isBlank()) apps else apps.filter { it.label.contains(query, ignoreCase = true) }
     }
@@ -60,6 +65,19 @@ fun AppCategorySettingsSection(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = newCategory,
+                onValueChange = { newCategory = it },
+                label = { Text("Add category") },
+                singleLine = true,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = {
+                onAddCategory(newCategory)
+                newCategory = ""
+            }, enabled = newCategory.isNotBlank()) { Text("Add") }
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(8.dp))
@@ -79,7 +97,8 @@ fun AppCategorySettingsSection(
             items(filtered, key = { it.packageName + it.activityClassName }) { app ->
                 AppCategoryRow(
                     app = app,
-                    category = categories[app.packageName] ?: AppCategory.OTHER,
+                    category = categories[app.packageName] ?: AppCategory.OTHER.displayName,
+                    categoryTypes = categoryTypes,
                     onSetCategory = { onSetCategory(app.packageName, it) }
                 )
             }
@@ -88,7 +107,7 @@ fun AppCategorySettingsSection(
 }
 
 @Composable
-private fun AppCategoryRow(app: AppInfo, category: AppCategory, onSetCategory: (AppCategory) -> Unit) {
+private fun AppCategoryRow(app: AppInfo, category: String, categoryTypes: List<String>, onSetCategory: (String) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Image(
@@ -106,11 +125,11 @@ private fun AppCategoryRow(app: AppInfo, category: AppCategory, onSetCategory: (
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            AppCategory.entries.forEach { option ->
+            categoryTypes.forEach { option ->
                 FilterChip(
                     selected = category == option,
                     onClick = { onSetCategory(option) },
-                    label = { Text(option.displayName, style = MaterialTheme.typography.labelSmall) }
+                    label = { Text(option, style = MaterialTheme.typography.labelSmall) }
                 )
             }
         }

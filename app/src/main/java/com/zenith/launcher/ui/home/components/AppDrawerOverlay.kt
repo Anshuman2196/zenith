@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -76,14 +75,15 @@ import com.zenith.launcher.data.model.displayName
 @Composable
 fun AppDrawerOverlay(
     apps: List<AppInfo>,
-    categories: Map<String, AppCategory>,
+    categories: Map<String, String>,
+    categoryTypes: List<String>,
     background: BackgroundSettings,
     onLaunch: (AppInfo) -> Unit,
     onDismiss: () -> Unit,
     onUninstall: (AppInfo) -> Unit,
     canUninstall: (AppInfo) -> Boolean,
     onOpenAppInfo: (AppInfo) -> Unit,
-    onSetCategory: (AppInfo, AppCategory) -> Unit,
+    onSetCategory: (AppInfo, String) -> Unit,
     onPinShortcut: (AppInfo) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
@@ -93,19 +93,13 @@ fun AppDrawerOverlay(
         if (query.isBlank()) apps else apps.filter { it.label.contains(query, ignoreCase = true) }
     }
 
-    // While searching, category grouping just gets in the way of finding one specific app, so
-    // it's dropped in favour of one flat alphabetical grid - grouping only applies to browsing.
-    val entries = remember(filtered, categories, query) {
-        if (query.isNotBlank()) {
-            filtered.map { DrawerEntry.App(it) }
-        } else {
-            AppCategory.entries
-                .map { category -> category to filtered.filter { (categories[it.packageName] ?: AppCategory.OTHER) == category } }
-                .filter { (_, appsInCategory) -> appsInCategory.isNotEmpty() }
-                .flatMap { (category, appsInCategory) ->
-                    listOf(DrawerEntry.Header(category)) + appsInCategory.map { DrawerEntry.App(it) }
-                }
-        }
+    // The reference uses a calm two-column board: each category is a frosted card containing
+    // its own compact 3-column app grid. Searching intentionally becomes one results card.
+    val groups = remember(filtered, categories, categoryTypes, query) {
+        if (query.isNotBlank()) listOf("Search results" to filtered)
+        else categoryTypes.map { type ->
+            type to filtered.filter { (categories[it.packageName] ?: AppCategory.OTHER.displayName) == type }
+        }.filter { it.second.isNotEmpty() }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -134,30 +128,19 @@ fun AppDrawerOverlay(
                 DrawerSearchBar(query = query, onQueryChange = { query = it }, onClose = onDismiss)
 
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    horizontalArrangement = Arrangement.spacedBy(18.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(
-                        entries,
-                        key = { entry ->
-                            when (entry) {
-                                is DrawerEntry.Header -> "header_${entry.category.name}"
-                                is DrawerEntry.App -> entry.app.packageName + entry.app.activityClassName
-                            }
-                        },
-                        span = { entry -> if (entry is DrawerEntry.Header) GridItemSpan(maxLineSpan) else GridItemSpan(1) }
-                    ) { entry ->
-                        when (entry) {
-                            is DrawerEntry.Header -> CategoryHeader(entry.category)
-                            is DrawerEntry.App -> DrawerAppIconCell(
-                                app = entry.app,
-                                onClick = { onLaunch(entry.app) },
-                                onLongClick = { menuApp = entry.app }
-                            )
-                        }
+                    items(groups, key = { it.first }) { (category, appsInCategory) ->
+                        DrawerCategoryCard(
+                            category = category,
+                            apps = appsInCategory,
+                            onLaunch = onLaunch,
+                            onLongClick = { menuApp = it }
+                        )
                     }
                 }
             }
@@ -168,7 +151,8 @@ fun AppDrawerOverlay(
     if (app != null) {
         AppContextMenuDialog(
             app = app,
-            currentCategory = categories[app.packageName] ?: AppCategory.OTHER,
+            currentCategory = categories[app.packageName] ?: AppCategory.OTHER.displayName,
+            categoryTypes = categoryTypes,
             canUninstall = canUninstall(app),
             onDismiss = { menuApp = null },
             onPin = { onPinShortcut(app); menuApp = null },
@@ -179,20 +163,32 @@ fun AppDrawerOverlay(
     }
 }
 
-private sealed interface DrawerEntry {
-    data class Header(val category: AppCategory) : DrawerEntry
-    data class App(val app: AppInfo) : DrawerEntry
-}
-
 @Composable
-private fun CategoryHeader(category: AppCategory) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.16f))
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-    ) {
-        Text(category.displayName, style = MaterialTheme.typography.titleMedium, color = Color.White)
+private fun DrawerCategoryCard(
+    category: String,
+    apps: List<AppInfo>,
+    onLaunch: (AppInfo) -> Unit,
+    onLongClick: (AppInfo) -> Unit
+) {
+    Column {
+        Text(category, style = MaterialTheme.typography.titleMedium, color = Color.White, modifier = Modifier.padding(start = 8.dp, bottom = 6.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.White.copy(alpha = 0.12f))
+                .padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            apps.chunked(3).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                    row.forEach { app ->
+                        Box(Modifier.weight(1f)) { DrawerAppIconCell(app, { onLaunch(app) }, { onLongClick(app) }) }
+                    }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
     }
 }
 
@@ -234,8 +230,9 @@ private fun DrawerAppIconCell(app: AppInfo, onClick: () -> Unit, onLongClick: ()
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color.White.copy(alpha = 0.10f))
+            // The category card is the visual surface. Keeping its children transparent mirrors
+            // the reference's uncluttered, grouped icon board rather than nesting cards.
+            .clip(RoundedCornerShape(14.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(vertical = 10.dp, horizontal = 4.dp)
     ) {
@@ -266,13 +263,14 @@ private fun DrawerAppIconCell(app: AppInfo, onClick: () -> Unit, onLongClick: ()
 @Composable
 private fun AppContextMenuDialog(
     app: AppInfo,
-    currentCategory: AppCategory,
+    currentCategory: String,
+    categoryTypes: List<String>,
     canUninstall: Boolean,
     onDismiss: () -> Unit,
     onPin: () -> Unit,
     onAppInfo: () -> Unit,
     onUninstall: () -> Unit,
-    onSetCategory: (AppCategory) -> Unit
+    onSetCategory: (String) -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -288,11 +286,11 @@ private fun AppContextMenuDialog(
                 Spacer(Modifier.height(8.dp))
                 Text("Move to...", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    AppCategory.entries.forEach { option ->
+                    categoryTypes.forEach { option ->
                         FilterChip(
                             selected = currentCategory == option,
                             onClick = { onSetCategory(option) },
-                            label = { Text(option.displayName, style = MaterialTheme.typography.labelSmall) }
+                            label = { Text(option, style = MaterialTheme.typography.labelSmall) }
                         )
                     }
                 }

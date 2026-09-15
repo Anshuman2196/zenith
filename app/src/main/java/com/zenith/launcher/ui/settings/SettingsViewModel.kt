@@ -32,7 +32,8 @@ data class SettingsUiState(
     val background: BackgroundSettings = BackgroundSettings(),
     val syncLockScreenWallpaper: Boolean = true,
     val lockOnDoubleTap: Boolean = false,
-    val appCategories: Map<String, AppCategory> = emptyMap()
+    val appCategories: Map<String, String> = emptyMap(),
+    val appCategoryTypes: List<String> = emptyList()
 )
 
 class SettingsViewModel(
@@ -58,37 +59,21 @@ class SettingsViewModel(
         viewModelScope.launch { _installedApps.value = appRepository.getInstalledApps() }
     }
 
-    val uiState: StateFlow<SettingsUiState> = combine(
-        settingsRepository.profileName,
-        settingsRepository.examSettings,
-        isDarkMode,
-        fontChoice,
-        _iconPacks,
-        settingsRepository.iconPackPackage,
-        settingsRepository.widgetVisibility,
-        _installedApps,
-        settingsRepository.focusAllowedApps,
-        settingsRepository.backgroundSettings,
-        settingsRepository.syncLockScreenWallpaper,
-        settingsRepository.lockOnDoubleTap,
-        settingsRepository.appCategories
-    ) { array ->
-        SettingsUiState(
-            profileName = array[0] as String,
-            examSettings = array[1] as ExamSettings,
-            isDarkMode = array[2] as Boolean,
-            fontChoice = array[3] as FontChoice,
-            availableIconPacks = array[4] as List<IconPackInfo>,
-            selectedIconPack = array[5] as String?,
-            widgetVisibility = array[6] as WidgetVisibility,
-            installedApps = array[7] as List<AppInfo>,
-            focusAllowedApps = array[8] as Set<String>,
-            background = array[9] as BackgroundSettings,
-            syncLockScreenWallpaper = array[10] as Boolean,
-            lockOnDoubleTap = array[11] as Boolean,
-            appCategories = array[12] as Map<String, AppCategory>
-        )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
+    val uiState: StateFlow<SettingsUiState> = settingsRepository.profileName.combine(settingsRepository.examSettings) { profileName, exams ->
+        SettingsUiState(profileName = profileName, examSettings = exams)
+    }.combine(isDarkMode) { state, darkMode -> state.copy(isDarkMode = darkMode) }
+        .combine(fontChoice) { state, font -> state.copy(fontChoice = font) }
+        .combine(_iconPacks) { state, packs -> state.copy(availableIconPacks = packs) }
+        .combine(settingsRepository.iconPackPackage) { state, pack -> state.copy(selectedIconPack = pack) }
+        .combine(settingsRepository.widgetVisibility) { state, visibility -> state.copy(widgetVisibility = visibility) }
+        .combine(_installedApps) { state, apps -> state.copy(installedApps = apps) }
+        .combine(settingsRepository.focusAllowedApps) { state, allowed -> state.copy(focusAllowedApps = allowed) }
+        .combine(settingsRepository.backgroundSettings) { state, background -> state.copy(background = background) }
+        .combine(settingsRepository.syncLockScreenWallpaper) { state, sync -> state.copy(syncLockScreenWallpaper = sync) }
+        .combine(settingsRepository.lockOnDoubleTap) { state, enabled -> state.copy(lockOnDoubleTap = enabled) }
+        .combine(settingsRepository.appCategories) { state, categories -> state.copy(appCategories = categories) }
+        .combine(settingsRepository.appCategoryTypes) { state, types -> state.copy(appCategoryTypes = types) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
 
     // ---------- Profile ----------
     fun updateProfileName(name: String) = viewModelScope.launch { settingsRepository.setProfileName(name) }
@@ -142,7 +127,6 @@ class SettingsViewModel(
     fun setLockOnDoubleTap(enabled: Boolean) = viewModelScope.launch { settingsRepository.setLockOnDoubleTap(enabled) }
 
     // ---------- App Drawer categories ----------
-    fun setAppCategory(packageName: String, category: AppCategory) = viewModelScope.launch {
-        settingsRepository.setAppCategory(packageName, category)
-    }
+    fun setAppCategory(packageName: String, category: String) = viewModelScope.launch { settingsRepository.setAppCategory(packageName, category) }
+    fun addAppCategoryType(label: String) = viewModelScope.launch { settingsRepository.addAppCategoryType(label) }
 }

@@ -1,6 +1,8 @@
 package com.zenith.launcher
 
 import android.os.Bundle
+import android.os.Build
+import android.Manifest
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
@@ -26,6 +28,9 @@ class MainActivity : ComponentActivity() {
     private val defaultLauncherRoleRequest =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { /* no-op either way */ }
 
+    private val notificationPermissionRequest =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* timer still works in-app if declined */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -38,6 +43,9 @@ class MainActivity : ComponentActivity() {
         // Once per cold start rather than on every onResume, so this doesn't nag every single
         // time the user returns to Home if they dismiss the system prompt without acting on it.
         DefaultLauncherHelper.requestIfNeeded(this, defaultLauncherRoleRequest)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
 
         val container = (application as LauncherApplication).container
         val factory = ViewModelFactory(container)

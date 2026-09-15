@@ -1,6 +1,7 @@
 package com.zenith.launcher.ui.home.components
 
 import android.net.Uri
+import android.app.WallpaperManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.util.BitmapUtils
+import androidx.core.graphics.drawable.toBitmap
 
 /**
  * Paints the chosen photo (cropped to fill) or solid color behind everything else - shared by
@@ -68,7 +70,22 @@ fun HomeBackground(background: BackgroundSettings, content: @Composable BoxScope
             Box(modifier = Modifier.fillMaxSize().background(Color(background.colorArgb)), content = content)
         }
         else -> {
-            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), content = content)
+            // Do not replace the phone's wallpaper with a launcher colour on first run. A custom
+            // image or colour above remains an explicit opt-in override.
+            val wallpaper by produceState<ImageBitmap?>(initialValue = null, key1 = context) {
+                value = runCatching { WallpaperManager.getInstance(context).drawable.toBitmap().asImageBitmap() }.getOrNull()
+            }
+            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+                wallpaper?.let {
+                    Image(
+                        bitmap = it,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                content()
+            }
         }
     }
 }

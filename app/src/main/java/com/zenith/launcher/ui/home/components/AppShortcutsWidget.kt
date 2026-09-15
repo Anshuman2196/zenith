@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -143,11 +145,12 @@ private fun PickAppDialog(apps: List<AppInfo>, onDismiss: () -> Unit, onPick: (A
         onDismissRequest = onDismiss,
         title = { Text("Pin an app") },
         text = {
-            Column {
+            Column(modifier = Modifier.heightIn(max = 420.dp)) {
                 if (apps.isEmpty()) {
                     Text("Every installed app is already pinned.", style = MaterialTheme.typography.bodyMedium)
                 } else {
-                    apps.take(200).forEach { app ->
+                    LazyColumn {
+                        items(apps, key = { it.packageName + it.activityClassName }) { app ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -163,6 +166,7 @@ private fun PickAppDialog(apps: List<AppInfo>, onDismiss: () -> Unit, onPick: (A
                             Spacer(Modifier.width(12.dp))
                             Text(app.label, style = MaterialTheme.typography.bodyMedium)
                         }
+                    }
                     }
                 }
             }

@@ -9,6 +9,8 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- System Status widget: Wi-Fi connectivity state. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
@@ -43,6 +45,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <receiver android:name=".util.TimerAlarmReceiver" android:exported="false" />
 
         <!-- See ZenithDeviceAdminReceiver: exists only for the double-tap-to-lock gesture. -->
         <receiver

@@ -26,3 +26,6 @@ val AppCategory.displayName: String
         AppCategory.ENTERTAINMENT -> "Entertainment"
         AppCategory.OTHER -> "Other"
     }
+
+/** Built-in category labels. Users may add to these through Settings. */
+val defaultAppCategoryTypes: List<String> = AppCategory.entries.map { it.displayName }

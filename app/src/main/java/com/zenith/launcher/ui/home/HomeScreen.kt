@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -32,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -48,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -69,12 +72,12 @@ import com.zenith.launcher.ui.home.components.HomeBackground
 import com.zenith.launcher.ui.home.components.MilestoneWidget
 import com.zenith.launcher.ui.home.components.PdfLauncherWidget
 import com.zenith.launcher.ui.home.components.PomodoroWidget
-import com.zenith.launcher.ui.home.components.RecentAppsOverlay
 import com.zenith.launcher.ui.home.components.SystemStatusWidget
 import com.zenith.launcher.ui.home.components.TodoWidget
 import com.zenith.launcher.ui.home.components.gridDragToReorder
 import com.zenith.launcher.ui.home.components.rememberGridDragDropState
 import com.zenith.launcher.ui.home.components.reportColumnBounds
+import com.zenith.launcher.util.SystemActionsHelper
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
@@ -98,12 +101,12 @@ private val EDGE_SWIPE_STRIP_WIDTH = 12.dp
  */
 @Composable
 fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
+    val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
     var showAddTodoDialog by remember { mutableStateOf(false) }
     var showAddChapterDialog by remember { mutableStateOf(false) }
     var showAddPdfDialog by remember { mutableStateOf(false) }
     var isDrawerOpen by remember { mutableStateOf(false) }
-    var isRecentsOpen by remember { mutableStateOf(false) }
 
     val visibleColumns = remember(state.widgetColumns, state.widgetVisibility) {
         state.widgetColumns.map { column ->
@@ -122,7 +125,13 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) resumeTrigger++
+            if (event == Lifecycle.Event.ON_RESUME) {
+                resumeTrigger++
+                // Package install/uninstall and system app-info screens return Home through this
+                // path; refreshing here makes the drawer, shortcuts and icon pack resolve at
+                // once instead of retaining a stale process-local list.
+                viewModel.loadApps()
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -139,8 +148,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
     // System back closes the app drawer if it's open, otherwise exits widget-rearranging mode if
     // that's active - both take priority over the launcher's normal "swallow back" behaviour.
     BackHandler(enabled = isDrawerOpen) { isDrawerOpen = false }
-    BackHandler(enabled = isRecentsOpen) { isRecentsOpen = false }
-    BackHandler(enabled = !isDrawerOpen && !isRecentsOpen && dragState.editMode) { dragState.exitEditMode() }
+    BackHandler(enabled = !isDrawerOpen && dragState.editMode) { dragState.exitEditMode() }
 
     Box(modifier = Modifier.fillMaxSize()) {
         HomeBackground(background = state.background)
@@ -164,11 +172,33 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
             )
 
             Box(modifier = Modifier.weight(1f)) {
+                if (visibleColumns.all { it.isEmpty() }) {
+                    Text(
+                        text = "Your Home is ready. Open Settings to enable the widgets you want.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.88f))
+                            .clickable(onClick = onOpenSettings)
+                            .padding(horizontal = 24.dp, vertical = 18.dp)
+                    )
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 12.dp, vertical = 8.dp)
+                        // Children consume their own taps. This recognizer therefore runs only
+                        // for genuinely free Home-screen space, as requested for double-tap lock.
+                        .then(
+                            if (state.lockOnDoubleTap) {
+                                Modifier.pointerInput(Unit) {
+                                    detectTapGestures(onDoubleTap = { SystemActionsHelper.lockScreen(context) })
+                                }
+                            } else Modifier
+                        )
                         // While rearranging, a tap on empty grid space (i.e. not consumed by any
                         // widget's own drag/click handling) finishes editing - the same as
                         // tapping empty space on the stock Android home screen.
@@ -203,6 +233,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                             // see GridDragDropState's class doc for why.
                                             .alpha(if (isDragging) 0f else 1f)
                                             .gridDragToReorder(dragState, id)
+                                            .heightIn(min = (state.widgetSizes[id]?.minHeightDp ?: 160).dp)
                                     ) {
                                         WidgetForId(
                                             id = id,
@@ -212,6 +243,12 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                             onShowAddChapter = { showAddChapterDialog = true },
                                             onShowAddPdf = { showAddPdfDialog = true }
                                         )
+                                        if (dragState.editMode) {
+                                            TextButton(
+                                                onClick = { viewModel.cycleWidgetSize(id) },
+                                                modifier = Modifier.align(Alignment.TopEnd)
+                                            ) { Text(state.widgetSizes[id]?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Standard") }
+                                        }
                                     }
                                 }
                             }
@@ -245,7 +282,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
         // never overlaps a widget's actual touch area - previously it was wider than that margin
         // and could steal the very first pixels of a drag starting from the rightmost column.
         // It's also fully disabled while rearranging, so it can never compete with a drag at all.
-        if (!isDrawerOpen && !isRecentsOpen && !dragState.editMode) {
+        if (!isDrawerOpen && !dragState.editMode) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
@@ -263,30 +300,6 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                         )
                     }
             )
-
-            // Mirror strip on the left edge: swiping left-to-right opens Zenith's own Recent
-            // Apps deck (see RecentAppsOverlay) - no special permission needed, unlike the
-            // system Overview screen a launcher would otherwise have to reach via Accessibility.
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .fillMaxHeight()
-                    .width(EDGE_SWIPE_STRIP_WIDTH)
-                    .pointerInput(Unit) {
-                        var accumulated = 0f
-                        detectHorizontalDragGestures(
-                            onDragStart = { accumulated = 0f },
-                            onHorizontalDrag = { change, dragAmount ->
-                                change.consume()
-                                accumulated += dragAmount
-                                if (accumulated > DRAWER_SWIPE_OPEN_THRESHOLD_PX) {
-                                    isRecentsOpen = true
-                                    accumulated = 0f
-                                }
-                            }
-                        )
-                    }
-            )
         }
 
         AnimatedVisibility(
@@ -298,6 +311,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
             AppDrawerOverlay(
                 apps = state.apps,
                 categories = state.appCategories,
+                categoryTypes = state.appCategoryTypes,
                 background = state.background,
                 onLaunch = { app -> viewModel.launchApp(app); isDrawerOpen = false },
                 onDismiss = { isDrawerOpen = false },
@@ -306,21 +320,6 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                 onOpenAppInfo = viewModel::openAppInfo,
                 onSetCategory = viewModel::setAppCategory,
                 onPinShortcut = viewModel::addAppShortcut
-            )
-        }
-
-        AnimatedVisibility(
-            visible = isRecentsOpen,
-            enter = slideInHorizontally(initialOffsetX = { fullWidth -> -fullWidth }),
-            exit = slideOutHorizontally(targetOffsetX = { fullWidth -> -fullWidth }),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            RecentAppsOverlay(
-                recentApps = state.recentApps,
-                background = state.background,
-                onLaunch = { app -> viewModel.launchApp(app); isRecentsOpen = false },
-                onRemove = viewModel::removeFromRecents,
-                onDismiss = { isRecentsOpen = false }
             )
         }
     }
