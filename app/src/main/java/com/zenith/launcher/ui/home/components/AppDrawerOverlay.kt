@@ -18,9 +18,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -93,8 +92,8 @@ fun AppDrawerOverlay(
         if (query.isBlank()) apps else apps.filter { it.label.contains(query, ignoreCase = true) }
     }
 
-    // The reference uses a calm two-column board: each category is a frosted card containing
-    // its own compact 3-column app grid. Searching intentionally becomes one results card.
+    // Categories occupy the full available width.  A grid of category cards left large blank
+    // areas whenever neighbouring categories had different app counts.
     val groups = remember(filtered, categories, categoryTypes, query) {
         if (query.isNotBlank()) listOf("Search results" to filtered)
         else categoryTypes.map { type ->
@@ -127,11 +126,9 @@ fun AppDrawerOverlay(
 
                 DrawerSearchBar(query = query, onQueryChange = { query = it }, onClose = onDismiss)
 
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                LazyColumn(
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp),
-                    horizontalArrangement = Arrangement.spacedBy(18.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(groups, key = { it.first }) { (category, appsInCategory) ->

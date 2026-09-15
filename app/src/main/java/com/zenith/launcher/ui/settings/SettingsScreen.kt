@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.ui.settings.components.AppCategorySettingsSection
+import com.zenith.launcher.ui.settings.components.AppsControlCenterSection
 import com.zenith.launcher.ui.settings.components.BackgroundSettingsSection
 import com.zenith.launcher.ui.settings.components.ExamSettingsSection
 import com.zenith.launcher.ui.settings.components.FocusModeAppsSection
@@ -102,7 +103,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 item { ThemeToggleSection(isDarkMode = state.isDarkMode, onToggle = viewModel::setDarkMode) }
-                item { FontSettingsSection(selected = state.fontChoice, onSelect = viewModel::setFontChoice) }
+                item { FontSettingsSection(selected = state.fontChoice, customFontPath = viewModel.customFontPath.collectAsState().value, onSelect = viewModel::setFontChoice, onImportFont = viewModel::setCustomFontPath) }
                 item {
                     IconPackPickerSection(
                         availablePacks = state.availableIconPacks,
@@ -146,17 +147,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 item {
-                    FocusModeAppsSection(
+                    AppsControlCenterSection(
                         apps = state.installedApps,
                         allowedPackages = state.focusAllowedApps,
-                        onToggleApp = viewModel::toggleFocusAllowedApp
-                    )
-                }
-                item {
-                    AppCategorySettingsSection(
-                        apps = state.installedApps,
                         categories = state.appCategories,
                         categoryTypes = state.appCategoryTypes,
+                        onToggleAllowed = viewModel::toggleFocusAllowedApp,
                         onSetCategory = viewModel::setAppCategory,
                         onAddCategory = viewModel::addAppCategoryType
                     )

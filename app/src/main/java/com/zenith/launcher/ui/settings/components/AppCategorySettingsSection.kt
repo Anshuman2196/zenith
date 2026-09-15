@@ -51,7 +51,8 @@ fun AppCategorySettingsSection(
     categories: Map<String, String>,
     categoryTypes: List<String>,
     onSetCategory: (packageName: String, String) -> Unit,
-    onAddCategory: (String) -> Unit
+    onAddCategory: (String) -> Unit,
+    showCard: Boolean = true
 ) {
     var query by remember { mutableStateOf("") }
     var newCategory by remember { mutableStateOf("") }
@@ -59,7 +60,7 @@ fun AppCategorySettingsSection(
         if (query.isBlank()) apps else apps.filter { it.label.contains(query, ignoreCase = true) }
     }
 
-    SettingsSectionCard(title = "App Categories") {
+    val content: @Composable () -> Unit = {
         Text(
             "Group apps in the App Drawer by how you use them.",
             style = MaterialTheme.typography.labelSmall,
@@ -104,6 +105,7 @@ fun AppCategorySettingsSection(
             }
         }
     }
+    if (showCard) SettingsSectionCard(title = "App Categories", content = content) else content()
 }
 
 @Composable

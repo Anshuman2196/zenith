@@ -16,6 +16,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -30,24 +31,29 @@ import androidx.compose.ui.unit.dp
 import com.zenith.launcher.util.TimerAlarmScheduler
 import kotlinx.coroutines.delay
 
-private enum class TimerMode { POMODORO, STOPWATCH }
+private enum class TimerMode { POMODORO, STOPWATCH, ALARM }
 private enum class PomodoroPhase(val label: String) { STUDY("Focus"), SHORT_BREAK("Short break"), LONG_BREAK("Long break") }
 
 /** A deliberate study/break timer: completing a phase pauses for confirmation instead of silently
  * rolling into the next one. A system alarm is scheduled while it runs, so completion is still
  * announced when Zenith is in the background. */
 @Composable
-fun PomodoroWidget() {
+fun PomodoroWidget(onPomodoroRunningChanged: (Boolean) -> Unit = {}) {
     var mode by rememberSaveable { mutableStateOf(TimerMode.POMODORO) }
     WidgetCard {
         Text("Study timer", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
         TabRow(selectedTabIndex = mode.ordinal) {
-            Tab(mode == TimerMode.POMODORO, { mode = TimerMode.POMODORO }, text = { Text("Focus cycles") })
+            Tab(mode == TimerMode.POMODORO, { mode = TimerMode.POMODORO }, text = { Text("Pomodoro") })
             Tab(mode == TimerMode.STOPWATCH, { mode = TimerMode.STOPWATCH }, text = { Text("Stopwatch") })
+            Tab(mode == TimerMode.ALARM, { mode = TimerMode.ALARM }, text = { Text("Alarm") })
         }
         Spacer(Modifier.height(12.dp))
-        if (mode == TimerMode.POMODORO) PomodoroSection() else StopwatchSection()
+        when (mode) {
+            TimerMode.POMODORO -> PomodoroSection(onPomodoroRunningChanged)
+            TimerMode.STOPWATCH -> StopwatchSection()
+            TimerMode.ALARM -> AlarmSection()
+        }
     }
 }
 
@@ -67,7 +73,7 @@ private fun StopwatchSection() {
 }
 
 @Composable
-private fun PomodoroSection() {
+private fun PomodoroSection(onPomodoroRunningChanged: (Boolean) -> Unit) {
     val context = LocalContext.current
     var focusMinutes by rememberSaveable { mutableIntStateOf(25) }
     var shortBreakMinutes by rememberSaveable { mutableIntStateOf(5) }
@@ -77,13 +83,16 @@ private fun PomodoroSection() {
     var completedFocusSessions by rememberSaveable { mutableIntStateOf(0) }
     var isRunning by rememberSaveable { mutableStateOf(false) }
     var awaitingNextPhase by rememberSaveable { mutableStateOf(false) }
+    var isRinging by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(isRunning) { onPomodoroRunningChanged(isRunning) }
+    DisposableEffect(Unit) { onDispose { onPomodoroRunningChanged(false) } }
 
     fun phaseDuration(current: PomodoroPhase) = when (current) {
         PomodoroPhase.STUDY -> focusMinutes * 60
         PomodoroPhase.SHORT_BREAK -> shortBreakMinutes * 60
         PomodoroPhase.LONG_BREAK -> longBreakMinutes * 60
     }
-    fun announceCompletion() { ToneGenerator(AudioManager.STREAM_ALARM, 85).startTone(ToneGenerator.TONE_PROP_ACK, 700) }
     fun advance() {
         phase = if (phase == PomodoroPhase.STUDY) {
             completedFocusSessions++
@@ -100,8 +109,19 @@ private fun PomodoroSection() {
         if (isRunning && secondsLeft == 0) {
             TimerAlarmScheduler.cancel(context)
             isRunning = false
-            announceCompletion()
+            isRinging = true
             advance()
+        }
+    }
+    // Keep the completion signal audible until the user explicitly resets or starts the break.
+    // A new ToneGenerator is short-lived per pulse, avoiding a retained audio resource.
+    LaunchedEffect(isRinging) {
+        while (isRinging) {
+            val tone = ToneGenerator(AudioManager.STREAM_ALARM, 90)
+            tone.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 700)
+            delay(750)
+            tone.release()
+            delay(250)
         }
     }
 
@@ -111,10 +131,10 @@ private fun PomodoroSection() {
         if (awaitingNextPhase) Text("Take a moment — start when ready.", style = MaterialTheme.typography.labelSmall)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            FilledTonalButton(onClick = { isRunning = !isRunning; awaitingNextPhase = false }) { Text(if (isRunning) "Pause" else if (awaitingNextPhase) "Start ${phase.label}" else "Start") }
+            FilledTonalButton(onClick = { isRunning = !isRunning; awaitingNextPhase = false; isRinging = false }) { Text(if (isRunning) "Pause" else if (awaitingNextPhase) "Start ${phase.label}" else "Start") }
             OutlinedButton(onClick = {
                 isRunning = false; awaitingNextPhase = false; phase = PomodoroPhase.STUDY
-                secondsLeft = focusMinutes * 60; completedFocusSessions = 0; TimerAlarmScheduler.cancel(context)
+                secondsLeft = focusMinutes * 60; completedFocusSessions = 0; isRinging = false; TimerAlarmScheduler.cancel(context)
             }) { Text("Reset") }
         }
         if (!isRunning) {
@@ -124,6 +144,37 @@ private fun PomodoroSection() {
             DurationStepper("Long break", longBreakMinutes) { longBreakMinutes = it; if (phase == PomodoroPhase.LONG_BREAK) secondsLeft = it * 60 }
             Text("A long break follows every 4 focus sessions.", style = MaterialTheme.typography.labelSmall)
         }
+    }
+}
+
+@Composable
+private fun AlarmSection() {
+    val context = LocalContext.current
+    val now = java.util.Calendar.getInstance()
+    var hour by rememberSaveable { mutableIntStateOf(now.get(java.util.Calendar.HOUR_OF_DAY)) }
+    var minute by rememberSaveable { mutableIntStateOf(now.get(java.util.Calendar.MINUTE)) }
+    var scheduled by rememberSaveable { mutableStateOf(false) }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        Text("Alarm", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Text("%02d:%02d".format(hour, minute), style = MaterialTheme.typography.headlineMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { hour = (hour + 23) % 24 }) { Text("−") }
+            Text("Hour")
+            IconButton(onClick = { hour = (hour + 1) % 24 }) { Text("+") }
+            IconButton(onClick = { minute = (minute + 59) % 60 }) { Text("−") }
+            Text("Min")
+            IconButton(onClick = { minute = (minute + 1) % 60 }) { Text("+") }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            FilledTonalButton(onClick = {
+                TimerAlarmScheduler.scheduleAlarm(context, hour, minute, "Zenith alarm")
+                scheduled = true
+            }) { Text(if (scheduled) "Alarm set" else "Set alarm") }
+            if (scheduled) OutlinedButton(onClick = { TimerAlarmScheduler.cancelAlarm(context); scheduled = false }) { Text("Cancel") }
+        }
+        Text(if (scheduled) "Your alarm will ring at %02d:%02d.".format(hour, minute) else "Set a one-time alarm for your next reminder.", style = MaterialTheme.typography.labelSmall)
     }
 }
 

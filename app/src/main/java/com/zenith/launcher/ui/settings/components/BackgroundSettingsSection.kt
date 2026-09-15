@@ -139,7 +139,9 @@ private fun BackgroundPreview(background: BackgroundSettings) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(96.dp)
+            // The taller frame exposes enough of a photo to judge its crop before leaving
+            // Settings; the previous shallow strip hid almost all of most wallpapers.
+            .height(220.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(
                 when {

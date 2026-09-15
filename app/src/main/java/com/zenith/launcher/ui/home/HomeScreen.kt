@@ -4,13 +4,18 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,7 +51,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -80,6 +87,7 @@ import com.zenith.launcher.ui.home.components.reportColumnBounds
 import com.zenith.launcher.util.SystemActionsHelper
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 /** How many columns the widget grid lays widgets out into - matches the reference design. */
 private const val GRID_COLUMN_COUNT = 3
@@ -94,6 +102,14 @@ private const val DRAWER_SWIPE_OPEN_THRESHOLD_PX = 60f
  */
 private val EDGE_SWIPE_STRIP_WIDTH = 12.dp
 
+/** These productive widgets stay readable while a Pomodoro is in progress. */
+private val POMODORO_BLUR_EXEMPT_WIDGETS = setOf(
+    WidgetIds.POMODORO,
+    WidgetIds.TODO,
+    WidgetIds.CHAPTER_BACKLOG,
+    WidgetIds.PDF_LAUNCHER
+)
+
 /**
  * The launcher's home screen: a live clock + greeting header, a hold-and-drag reorderable
  * 3-column widget grid, and a right-edge swipe (right-to-left) that opens the App Drawer as its
@@ -107,6 +123,8 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
     var showAddChapterDialog by remember { mutableStateOf(false) }
     var showAddPdfDialog by remember { mutableStateOf(false) }
     var isDrawerOpen by remember { mutableStateOf(false) }
+    var isPomodoroRunning by remember { mutableStateOf(false) }
+    var showFocusExitPause by remember { mutableStateOf(false) }
 
     val visibleColumns = remember(state.widgetColumns, state.widgetVisibility) {
         state.widgetColumns.map { column ->
@@ -149,6 +167,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
     // that's active - both take priority over the launcher's normal "swallow back" behaviour.
     BackHandler(enabled = isDrawerOpen) { isDrawerOpen = false }
     BackHandler(enabled = !isDrawerOpen && dragState.editMode) { dragState.exitEditMode() }
+    BackHandler(enabled = showFocusExitPause) { /* The reflection completes automatically. */ }
 
     Box(modifier = Modifier.fillMaxSize()) {
         HomeBackground(background = state.background)
@@ -163,12 +182,22 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                     scaleX = contentScale.value
                     scaleY = contentScale.value
                 }
+                // Attach this to the full Home surface rather than only the header. Child
+                // widgets keep their own gestures; a double tap on any unused Home space locks.
+                .then(
+                    if (state.lockOnDoubleTap) {
+                        Modifier.pointerInput(state.lockOnDoubleTap) {
+                            detectTapGestures(onDoubleTap = { SystemActionsHelper.lockScreen(context) })
+                        }
+                    } else Modifier
+                )
         ) {
             GreetingHeader(
                 greeting = state.greeting,
                 onSettingsClick = onOpenSettings,
                 overPhotoBackground = state.background.imageUri != null,
-                lockOnDoubleTap = state.lockOnDoubleTap
+                lockOnDoubleTap = state.lockOnDoubleTap,
+                modifier = Modifier.blur(if (isPomodoroRunning) 10.dp else 0.dp)
             )
 
             Box(modifier = Modifier.weight(1f)) {
@@ -176,6 +205,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                     Text(
                         text = "Your Home is ready. Open Settings to enable the widgets you want.",
                         style = MaterialTheme.typography.bodyLarge,
+                        color = androidx.compose.ui.graphics.Color.White,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -190,15 +220,6 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 12.dp, vertical = 8.dp)
-                        // Children consume their own taps. This recognizer therefore runs only
-                        // for genuinely free Home-screen space, as requested for double-tap lock.
-                        .then(
-                            if (state.lockOnDoubleTap) {
-                                Modifier.pointerInput(Unit) {
-                                    detectTapGestures(onDoubleTap = { SystemActionsHelper.lockScreen(context) })
-                                }
-                            } else Modifier
-                        )
                         // While rearranging, a tap on empty grid space (i.e. not consumed by any
                         // widget's own drag/click handling) finishes editing - the same as
                         // tapping empty space on the stock Android home screen.
@@ -227,13 +248,18 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                     val isDragging = dragState.isDragging(id)
                                     Box(
                                         modifier = Modifier
-                                            .fillMaxWidth()
+                                            .fillMaxWidth((state.widgetWidths[id] ?: 100) / 100f)
                                             // The real widget is only ever hidden, never moved by
                                             // hand, while its ghost (below) does the floating -
                                             // see GridDragDropState's class doc for why.
                                             .alpha(if (isDragging) 0f else 1f)
                                             .gridDragToReorder(dragState, id)
-                                            .heightIn(min = (state.widgetSizes[id]?.minHeightDp ?: 160).dp)
+                                            .then(
+                                                if (isPomodoroRunning && id !in POMODORO_BLUR_EXEMPT_WIDGETS) {
+                                                    Modifier.blur(10.dp)
+                                                } else Modifier
+                                            )
+                                            .heightIn(min = (state.widgetHeights[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160).dp)
                                     ) {
                                         WidgetForId(
                                             id = id,
@@ -241,13 +267,19 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                             viewModel = viewModel,
                                             onShowAddTodo = { showAddTodoDialog = true },
                                             onShowAddChapter = { showAddChapterDialog = true },
-                                            onShowAddPdf = { showAddPdfDialog = true }
+                                            onShowAddPdf = { showAddPdfDialog = true },
+                                            onFocusToggle = {
+                                                if (state.isFocusModeActive) showFocusExitPause = true
+                                                else viewModel.toggleFocusMode()
+                                            },
+                                            onPomodoroRunningChanged = { isPomodoroRunning = it }
                                         )
                                         if (dragState.editMode) {
-                                            TextButton(
-                                                onClick = { viewModel.cycleWidgetSize(id) },
-                                                modifier = Modifier.align(Alignment.TopEnd)
-                                            ) { Text(state.widgetSizes[id]?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Standard") }
+                                            WidgetResizeGrip(
+                                                onHeightDelta = { viewModel.adjustWidgetHeight(id, it) },
+                                                onWidthDelta = { viewModel.adjustWidgetWidth(id, it) },
+                                                modifier = Modifier.align(Alignment.BottomEnd)
+                                            )
                                         }
                                     }
                                 }
@@ -263,7 +295,9 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                         viewModel = viewModel,
                         onShowAddTodo = {},
                         onShowAddChapter = {},
-                        onShowAddPdf = {}
+                        onShowAddPdf = {},
+                        onFocusToggle = {},
+                        onPomodoroRunningChanged = {}
                     )
                 }
 
@@ -322,6 +356,13 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                 onPinShortcut = viewModel::addAppShortcut
             )
         }
+
+        if (showFocusExitPause) {
+            FocusModeExitPause(onFinished = {
+                showFocusExitPause = false
+                viewModel.toggleFocusMode()
+            })
+        }
     }
 
     if (showAddTodoDialog) {
@@ -344,6 +385,101 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
             onDismiss = { showAddPdfDialog = false },
             onConfirm = { title, uri -> viewModel.addPdfLink(title, uri); showAddPdfDialog = false }
         )
+    }
+}
+
+/** Drag the diagonal corner grip to resize a widget; no preset-size buttons are needed. */
+@Composable
+private fun WidgetResizeGrip(
+    onHeightDelta: (Int) -> Unit,
+    onWidthDelta: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(28.dp)
+            .clip(RoundedCornerShape(topStart = 10.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f))
+            .pointerInput(Unit) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    if (kotlin.math.abs(dragAmount.y) > 8f) onHeightDelta(if (dragAmount.y > 0) 24 else -24)
+                    if (kotlin.math.abs(dragAmount.x) > 8f) onWidthDelta(if (dragAmount.x > 0) 10 else -10)
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text("↘", color = Color.White, style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+/**
+ * A deliberately non-interactive pause before ending Focus Mode. It is not a confirmation:
+ * after a short breathing interval the mode is switched off automatically.
+ */
+@Composable
+private fun FocusModeExitPause(onFinished: () -> Unit) {
+    var secondsLeft by remember { mutableStateOf(18) }
+    val messages = listOf(
+        "Are you sure you want to do this?",
+        "Was your session good enough?",
+        "Take one slow breath before you leave focus.",
+        "Notice what you completed — then return with intention."
+    )
+    val breathing = rememberInfiniteTransition(label = "focusExitBreath")
+    val ringScale by breathing.animateFloat(
+        initialValue = 0.88f,
+        targetValue = 1.12f,
+        animationSpec = infiniteRepeatable(tween(3500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "focusExitBreathScale"
+    )
+    LaunchedEffect(Unit) {
+        while (secondsLeft > 0) {
+            delay(1000)
+            secondsLeft--
+        }
+        onFinished()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.78f))
+            // Consume taps so this stays a reflection rather than an accidental confirmation.
+            .pointerInput(Unit) { detectTapGestures { } },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(210.dp)
+                .graphicsLayer { scaleX = ringScale; scaleY = ringScale }
+                .clip(RoundedCornerShape(105.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+        )
+        Column(
+            modifier = Modifier.padding(horizontal = 34.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text("Pause before leaving Focus Mode", style = MaterialTheme.typography.titleLarge, color = Color.White)
+            Text(
+                messages[(18 - secondsLeft) / 5 % messages.size],
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White.copy(alpha = 0.9f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Text(
+                "Exhale slowly · continuing in $secondsLeft s",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                "Focus Mode will turn off automatically. No response is needed.",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
     }
 }
 
@@ -423,12 +559,14 @@ private fun WidgetForId(
     viewModel: HomeViewModel,
     onShowAddTodo: () -> Unit,
     onShowAddChapter: () -> Unit,
-    onShowAddPdf: () -> Unit
+    onShowAddPdf: () -> Unit,
+    onFocusToggle: () -> Unit = {},
+    onPomodoroRunningChanged: (Boolean) -> Unit = {}
 ) {
     when (id) {
         WidgetIds.COUNTDOWN -> CountdownWidget(state.examCountdowns)
-        WidgetIds.FOCUS_MODE -> FocusModeToggle(state.isFocusModeActive, viewModel::toggleFocusMode)
-        WidgetIds.POMODORO -> PomodoroWidget()
+        WidgetIds.FOCUS_MODE -> FocusModeToggle(state.isFocusModeActive, onFocusToggle)
+        WidgetIds.POMODORO -> PomodoroWidget(onPomodoroRunningChanged)
         WidgetIds.TODO -> TodoWidget(
             items = state.todoItems,
             onAddClick = onShowAddTodo,

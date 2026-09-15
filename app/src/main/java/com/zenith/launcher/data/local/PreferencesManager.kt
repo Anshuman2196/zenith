@@ -53,6 +53,8 @@ class PreferencesManager(private val context: Context) {
         val WIDGET_VISIBILITY = stringPreferencesKey("widget_visibility_json")
         val WIDGET_ORDER = stringPreferencesKey("widget_order_json")
         val WIDGET_SIZES = stringPreferencesKey("widget_sizes_json")
+        val WIDGET_HEIGHTS = stringPreferencesKey("widget_heights_json")
+        val WIDGET_WIDTHS = stringPreferencesKey("widget_widths_json")
         val TODO_LIST = stringPreferencesKey("todo_list_json")
         val CHAPTER_LIST = stringPreferencesKey("chapter_list_json")
         val PDF_LIST = stringPreferencesKey("pdf_list_json")
@@ -177,6 +179,40 @@ class PreferencesManager(private val context: Context) {
                 ?.toMutableMap() ?: mutableMapOf()
             current[id] = size
             prefs[Keys.WIDGET_SIZES] = json.encodeToString(current)
+        }
+    }
+
+    /** User-selected widget heights in dp; separate from legacy size presets for migration. */
+    val widgetHeights: Flow<Map<String, Int>> = context.dataStore.data.map { prefs ->
+        prefs[Keys.WIDGET_HEIGHTS]
+            ?.let { runCatching { json.decodeFromString<Map<String, Int>>(it) }.getOrNull() }
+            ?: emptyMap()
+    }
+
+    suspend fun setWidgetHeight(id: String, heightDp: Int) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.WIDGET_HEIGHTS]
+                ?.let { runCatching { json.decodeFromString<Map<String, Int>>(it) }.getOrNull() }
+                ?.toMutableMap() ?: mutableMapOf()
+            current[id] = heightDp.coerceIn(80, 600)
+            prefs[Keys.WIDGET_HEIGHTS] = json.encodeToString(current)
+        }
+    }
+
+    /** Percentage of the widget's grid column used by a widget (60–100%). */
+    val widgetWidths: Flow<Map<String, Int>> = context.dataStore.data.map { prefs ->
+        prefs[Keys.WIDGET_WIDTHS]
+            ?.let { runCatching { json.decodeFromString<Map<String, Int>>(it) }.getOrNull() }
+            ?: emptyMap()
+    }
+
+    suspend fun setWidgetWidth(id: String, widthPercent: Int) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.WIDGET_WIDTHS]
+                ?.let { runCatching { json.decodeFromString<Map<String, Int>>(it) }.getOrNull() }
+                ?.toMutableMap() ?: mutableMapOf()
+            current[id] = widthPercent.coerceIn(60, 100)
+            prefs[Keys.WIDGET_WIDTHS] = json.encodeToString(current)
         }
     }
 
@@ -339,7 +375,7 @@ class PreferencesManager(private val context: Context) {
 
     // ---------- App Drawer categories ----------
 
-    /** Package name -> [AppCategory]. Any app missing from this map is [AppCategory.OTHER.displayName]. */
+    /** Package name -> drawer category, including an explicit initial suggestion for every app. */
     val appCategories: Flow<Map<String, String>> = context.dataStore.data.map { prefs ->
         prefs[Keys.APP_CATEGORIES]
             ?.let { runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
@@ -371,8 +407,24 @@ class PreferencesManager(private val context: Context) {
             val current = prefs[Keys.APP_CATEGORIES]
                 ?.let { runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
                 ?.toMutableMap() ?: mutableMapOf()
-            if (category == AppCategory.OTHER.displayName) current.remove(packageName) else current[packageName] = category
+            current[packageName] = category
             prefs[Keys.APP_CATEGORIES] = json.encodeToString(current as Map<String, String>)
+        }
+    }
+
+    /**
+     * Gives newly discovered launcher apps a real persisted category immediately.  Keeping the
+     * default explicit (rather than only deriving it in the UI) makes category management
+     * predictable while preserving every later user assignment.
+     */
+    suspend fun assignDefaultCategories(defaults: Map<String, String>) {
+        if (defaults.isEmpty()) return
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.APP_CATEGORIES]
+                ?.let { runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull() }
+                ?.toMutableMap() ?: mutableMapOf()
+            defaults.forEach { (packageName, category) -> current.putIfAbsent(packageName, category) }
+            prefs[Keys.APP_CATEGORIES] = json.encodeToString(current)
         }
     }
 
