@@ -39,7 +39,6 @@ data class HomeUiState(
     val widgetColumns: List<List<String>> = emptyList(),
     val widgetSizes: Map<String, WidgetSize> = emptyMap(),
     val widgetHeights: Map<String, Int> = emptyMap(),
-    val widgetWidths: Map<String, Int> = emptyMap(),
     val examCountdowns: List<ExamCountdown> = emptyList(),
     val todoItems: List<TodoItem> = emptyList(),
     val chapterItems: List<ChapterItem> = emptyList(),
@@ -93,7 +92,6 @@ class HomeViewModel(
         val columns: List<List<String>>,
         val sizes: Map<String, WidgetSize>,
         val heights: Map<String, Int>,
-        val widths: Map<String, Int>,
         val focusActive: Boolean,
         val allowedApps: Set<String>,
         val background: BackgroundSettings,
@@ -106,13 +104,12 @@ class HomeViewModel(
     )
 
     private val baseState = settingsRepository.profileName.combine(settingsRepository.examSettings) { name, exam ->
-        BaseSettings(name, exam, WidgetVisibility(), emptyList(), emptyMap(), emptyMap(), emptyMap(), false, emptySet(),
+        BaseSettings(name, exam, WidgetVisibility(), emptyList(), emptyMap(), emptyMap(), false, emptySet(),
             BackgroundSettings(), MilestoneTarget(), emptyList(), emptyList(), emptyMap(), emptyList(), false)
     }.combine(settingsRepository.widgetVisibility) { base, visibility -> base.copy(visibility = visibility) }
         .combine(settingsRepository.widgetColumns) { base, columns -> base.copy(columns = columns) }
         .combine(settingsRepository.widgetSizes) { base, sizes -> base.copy(sizes = sizes) }
         .combine(settingsRepository.widgetHeights) { base, heights -> base.copy(heights = heights) }
-        .combine(settingsRepository.widgetWidths) { base, widths -> base.copy(widths = widths) }
         .combine(settingsRepository.focusModeActive) { base, active -> base.copy(focusActive = active) }
         .combine(settingsRepository.focusAllowedApps) { base, allowed -> base.copy(allowedApps = allowed) }
         .combine(settingsRepository.backgroundSettings) { base, background -> base.copy(background = background) }
@@ -144,7 +141,7 @@ class HomeViewModel(
         val resolvedShortcuts = base.appShortcutRefs.mapNotNull { ref -> apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName } }
         val resolvedRecents = base.recentAppRefs.mapNotNull { ref -> apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName } }
         HomeUiState(
-            greeting = buildGreeting(base.name), apps = visibleApps, widgetVisibility = base.visibility, widgetColumns = base.columns, widgetSizes = base.sizes, widgetHeights = base.heights, widgetWidths = base.widths,
+            greeting = buildGreeting(base.name), apps = visibleApps, widgetVisibility = base.visibility, widgetColumns = base.columns, widgetSizes = base.sizes, widgetHeights = base.heights,
             examCountdowns = base.exam.exams.map { exam -> ExamCountdown(exam.id, exam.name, exam.dateMillis?.let { CountdownUtil.daysRemaining(it) }) },
             todoItems = content.todos, chapterItems = content.chapters, pdfLinks = content.pdfs,
             isFocusModeActive = base.focusActive, background = base.background, isLoadingApps = content.loading,
@@ -203,9 +200,6 @@ class HomeViewModel(
         settingsRepository.setWidgetHeight(id, (uiState.value.widgetHeights[id] ?: legacyHeight) + deltaDp)
     }
 
-    fun adjustWidgetWidth(id: String, deltaPercent: Int) = viewModelScope.launch {
-        settingsRepository.setWidgetWidth(id, (uiState.value.widgetWidths[id] ?: 100) + deltaPercent)
-    }
 
     /** Sensible first-run categorisation; users can freely change every assignment afterwards. */
     private fun suggestedCategory(app: AppInfo): String {

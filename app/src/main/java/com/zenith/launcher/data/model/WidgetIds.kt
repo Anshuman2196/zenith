@@ -38,6 +38,19 @@ object WidgetIds {
      * persisted arrangement is a list of *columns*, each an ordered list of widget ids, rather
      * than one flat list. This is the arrangement a fresh install starts with.
      */
+    /** Initial heights (dp) tuned to the reference home-screen proportions. */
+    val DEFAULT_HEIGHTS: Map<String, Int> = mapOf(
+        COUNTDOWN to 128,
+        FOCUS_MODE to 128,
+        MILESTONE to 190,
+        POMODORO to 500,
+        SYSTEM_STATUS to 190,
+        TODO to 240,
+        CHAPTER_BACKLOG to 220,
+        PDF_LAUNCHER to 190,
+        APP_SHORTCUTS to 160
+    )
+
     val DEFAULT_COLUMNS: List<List<String>> = listOf(
         listOf(COUNTDOWN, FOCUS_MODE, MILESTONE),
         listOf(POMODORO, SYSTEM_STATUS),

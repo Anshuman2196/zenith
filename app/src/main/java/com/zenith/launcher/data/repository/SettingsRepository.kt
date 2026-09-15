@@ -47,8 +47,6 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     suspend fun setWidgetSize(id: String, size: WidgetSize) = prefs.setWidgetSize(id, size)
     val widgetHeights: Flow<Map<String, Int>> = prefs.widgetHeights
     suspend fun setWidgetHeight(id: String, heightDp: Int) = prefs.setWidgetHeight(id, heightDp)
-    val widgetWidths: Flow<Map<String, Int>> = prefs.widgetWidths
-    suspend fun setWidgetWidth(id: String, widthPercent: Int) = prefs.setWidgetWidth(id, widthPercent)
 
     val todoList: Flow<List<TodoItem>> = prefs.todoList
     suspend fun setTodoList(items: List<TodoItem>) = prefs.setTodoList(items)

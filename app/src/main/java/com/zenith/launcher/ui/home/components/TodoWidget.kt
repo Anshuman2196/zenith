@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -34,24 +36,44 @@ fun TodoWidget(
         if (items.isEmpty()) {
             EmptyHint("No tasks yet - tap + to add one")
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                items.forEach { item ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                items(items, key = { it.id }) { item ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Checkbox(checked = item.isDone, onCheckedChange = { onToggle(item.id) })
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Checkbox(
+                                checked = item.isDone,
+                                onCheckedChange = { onToggle(item.id) }
+                            )
                             Text(
                                 text = item.text,
                                 style = MaterialTheme.typography.bodyMedium,
                                 textDecoration = if (item.isDone) TextDecoration.LineThrough else null,
-                                color = if (item.isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                                color = if (item.isDone) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                modifier = Modifier.padding(end = 4.dp)
                             )
                         }
                         IconButton(onClick = { onDelete(item.id) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete task", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete task",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }

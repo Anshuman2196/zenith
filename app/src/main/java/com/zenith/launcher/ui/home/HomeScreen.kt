@@ -247,7 +247,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                     val isDragging = dragState.isDragging(id)
                                     Box(
                                         modifier = Modifier
-                                            .fillMaxWidth((state.widgetWidths[id] ?: 100) / 100f)
+                                            .fillMaxWidth()
                                             // The real widget is only ever hidden, never moved by
                                             // hand, while its ghost (below) does the floating -
                                             // see GridDragDropState's class doc for why.
@@ -258,7 +258,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                                     Modifier.blur(10.dp)
                                                 } else Modifier
                                             )
-                                            .height((state.widgetHeights[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160).coerceIn(96, 600).dp)
+                                            .height((state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160).coerceIn(96, 600).dp)
                                     ) {
                                         WidgetForId(
                                             id = id,
@@ -276,7 +276,6 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                         if (dragState.editMode) {
                                             WidgetResizeGrip(
                                                 onHeightDelta = { viewModel.adjustWidgetHeight(id, it) },
-                                                onWidthDelta = { viewModel.adjustWidgetWidth(id, it) },
                                                 modifier = Modifier.align(Alignment.BottomEnd)
                                             )
                                         }
@@ -391,7 +390,6 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
 @Composable
 private fun WidgetResizeGrip(
     onHeightDelta: (Int) -> Unit,
-    onWidthDelta: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -402,8 +400,9 @@ private fun WidgetResizeGrip(
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
                     change.consume()
-                    if (kotlin.math.abs(dragAmount.y) > 8f) onHeightDelta(if (dragAmount.y > 0) 24 else -24)
-                    if (kotlin.math.abs(dragAmount.x) > 8f) onWidthDelta(if (dragAmount.x > 0) 10 else -10)
+                    if (kotlin.math.abs(dragAmount.y) > 8f) {
+                        onHeightDelta(if (dragAmount.y > 0) 24 else -24)
+                    }
                 }
             },
         contentAlignment = Alignment.Center
