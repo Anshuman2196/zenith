@@ -86,8 +86,7 @@ class SettingsViewModel(
             background = array[9] as BackgroundSettings,
             syncLockScreenWallpaper = array[10] as Boolean,
             lockOnDoubleTap = array[11] as Boolean,
-            @Suppress("UNCHECKED_CAST")
-            appCategories = array[12] as Map<String, AppCategory>
+            @Suppress("UNCHECKED_CAST") appCategories = array[12] as Map<String, AppCategory>
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
 
