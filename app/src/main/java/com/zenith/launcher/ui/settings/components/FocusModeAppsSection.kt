@@ -39,7 +39,7 @@ fun FocusModeAppsSection(
     val filteredApps = remember(apps, query) {
         if (query.isBlank()) apps else apps.filter { it.label.contains(query, ignoreCase = true) }
     }
-    val content: @Composable ColumnScope.() -> Unit = {
+    val content: @Composable () -> Unit = {
         Text(
             "Pick the apps you want to stay usable while Focus Mode is on (e.g. calculator, notes). Everything else is hidden.",
             style = MaterialTheme.typography.labelSmall,
@@ -68,9 +68,5 @@ fun FocusModeAppsSection(
             }
         }
     }
-    if (showCard) {
-        SettingsSectionCard(title = "Focus Mode - Allowed Apps", content = content)
-    } else {
-        Column(content = content)
-    }
+    if (showCard) SettingsSectionCard(title = "Focus Mode - Allowed Apps", content = content) else content()
 }
