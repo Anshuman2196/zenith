@@ -45,6 +45,10 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     suspend fun setWidgetColumns(columns: List<List<String>>) = prefs.setWidgetColumns(columns)
     val widgetSizes: Flow<Map<String, WidgetSize>> = prefs.widgetSizes
     suspend fun setWidgetSize(id: String, size: WidgetSize) = prefs.setWidgetSize(id, size)
+    val widgetHeights: Flow<Map<String, Int>> = prefs.widgetHeights
+    suspend fun setWidgetHeight(id: String, heightDp: Int) = prefs.setWidgetHeight(id, heightDp)
+    val widgetWidths: Flow<Map<String, Int>> = prefs.widgetWidths
+    suspend fun setWidgetWidth(id: String, widthPercent: Int) = prefs.setWidgetWidth(id, widthPercent)
 
     val todoList: Flow<List<TodoItem>> = prefs.todoList
     suspend fun setTodoList(items: List<TodoItem>) = prefs.setTodoList(items)
@@ -81,6 +85,7 @@ class SettingsRepository(private val prefs: PreferencesManager) {
 
     val appCategories: Flow<Map<String, String>> = prefs.appCategories
     suspend fun setAppCategory(packageName: String, category: String) = prefs.setAppCategory(packageName, category)
+    suspend fun assignDefaultCategories(defaults: Map<String, String>) = prefs.assignDefaultCategories(defaults)
     val appCategoryTypes: Flow<List<String>> = prefs.appCategoryTypes
     suspend fun addAppCategoryType(label: String) = prefs.addAppCategoryType(label)
 

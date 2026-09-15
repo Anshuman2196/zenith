@@ -1,13 +1,15 @@
 package com.zenith.launcher.ui.home.components
 
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -17,7 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,12 +42,14 @@ import com.zenith.launcher.util.SystemActionsHelper
  * [lockOnDoubleTap] (a Settings toggle) makes double-tapping anywhere in the header - the same
  * gesture several stock launchers use - lock the screen via [SystemActionsHelper.lockScreen].
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GreetingHeader(
     greeting: String,
     onSettingsClick: () -> Unit,
     overPhotoBackground: Boolean = false,
-    lockOnDoubleTap: Boolean = false
+    lockOnDoubleTap: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val textColor = if (overPhotoBackground) Color.White else MaterialTheme.colorScheme.onBackground
@@ -56,19 +61,22 @@ fun GreetingHeader(
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(top = 24.dp, start = 20.dp, end = 8.dp, bottom = 4.dp)
-            .then(
-                if (lockOnDoubleTap) {
-                    Modifier.pointerInput(Unit) {
-                        detectTapGestures(onDoubleTap = { SystemActionsHelper.lockScreen(context) })
-                    }
-                } else {
-                    Modifier
-                }
-            )
+            .then(if (lockOnDoubleTap) Modifier.combinedClickable(onClick = {}, onDoubleClick = { SystemActionsHelper.lockScreen(context) }) else Modifier)
     ) {
+        Row(
+            modifier = Modifier.align(Alignment.CenterStart),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(Icons.Default.WbSunny, contentDescription = "Weather", tint = textColor, modifier = Modifier.size(18.dp))
+            Column {
+                Text("Weather", style = MaterialTheme.typography.labelSmall, color = secondaryTextColor)
+                Text("—°", style = MaterialTheme.typography.bodyMedium, color = textColor)
+            }
+        }
         Text(
             text = greeting,
             style = MaterialTheme.typography.headlineMedium.copy(shadow = textShadow),
@@ -81,7 +89,7 @@ fun GreetingHeader(
                 .fillMaxWidth()
                 // Reserves roughly the width of the (now-larger) clock + gear group on the right
                 // so a long greeting phrase truncates with an ellipsis instead of drawing under it.
-                .padding(end = 132.dp)
+                .padding(start = 86.dp, end = 132.dp)
         )
 
         Row(

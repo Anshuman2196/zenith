@@ -14,6 +14,7 @@ import com.zenith.launcher.data.model.PdfLink
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetVisibility
 import com.zenith.launcher.data.model.WidgetSize
+import com.zenith.launcher.data.model.displayName
 import com.zenith.launcher.data.repository.AppRepository
 import com.zenith.launcher.data.repository.SettingsRepository
 import com.zenith.launcher.util.CountdownUtil
@@ -37,6 +38,8 @@ data class HomeUiState(
     /** The Home screen's 3-column grid arrangement - each entry is one column's ordered ids. */
     val widgetColumns: List<List<String>> = emptyList(),
     val widgetSizes: Map<String, WidgetSize> = emptyMap(),
+    val widgetHeights: Map<String, Int> = emptyMap(),
+    val widgetWidths: Map<String, Int> = emptyMap(),
     val examCountdowns: List<ExamCountdown> = emptyList(),
     val todoItems: List<TodoItem> = emptyList(),
     val chapterItems: List<ChapterItem> = emptyList(),
@@ -76,7 +79,9 @@ class HomeViewModel(
         viewModelScope.launch {
             _isLoadingApps.value = true
             val iconPack = settingsRepository.iconPackPackage.first()
-            _apps.value = appRepository.getInstalledApps(iconPack)
+            val apps = appRepository.getInstalledApps(iconPack)
+            settingsRepository.assignDefaultCategories(apps.associate { it.packageName to suggestedCategory(it) })
+            _apps.value = apps
             _isLoadingApps.value = false
         }
     }
@@ -87,6 +92,8 @@ class HomeViewModel(
         val visibility: WidgetVisibility,
         val columns: List<List<String>>,
         val sizes: Map<String, WidgetSize>,
+        val heights: Map<String, Int>,
+        val widths: Map<String, Int>,
         val focusActive: Boolean,
         val allowedApps: Set<String>,
         val background: BackgroundSettings,
@@ -99,11 +106,13 @@ class HomeViewModel(
     )
 
     private val baseState = settingsRepository.profileName.combine(settingsRepository.examSettings) { name, exam ->
-        BaseSettings(name, exam, WidgetVisibility(), emptyList(), emptyMap(), false, emptySet(),
+        BaseSettings(name, exam, WidgetVisibility(), emptyList(), emptyMap(), emptyMap(), emptyMap(), false, emptySet(),
             BackgroundSettings(), MilestoneTarget(), emptyList(), emptyList(), emptyMap(), emptyList(), false)
     }.combine(settingsRepository.widgetVisibility) { base, visibility -> base.copy(visibility = visibility) }
         .combine(settingsRepository.widgetColumns) { base, columns -> base.copy(columns = columns) }
         .combine(settingsRepository.widgetSizes) { base, sizes -> base.copy(sizes = sizes) }
+        .combine(settingsRepository.widgetHeights) { base, heights -> base.copy(heights = heights) }
+        .combine(settingsRepository.widgetWidths) { base, widths -> base.copy(widths = widths) }
         .combine(settingsRepository.focusModeActive) { base, active -> base.copy(focusActive = active) }
         .combine(settingsRepository.focusAllowedApps) { base, allowed -> base.copy(allowedApps = allowed) }
         .combine(settingsRepository.backgroundSettings) { base, background -> base.copy(background = background) }
@@ -135,7 +144,7 @@ class HomeViewModel(
         val resolvedShortcuts = base.appShortcutRefs.mapNotNull { ref -> apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName } }
         val resolvedRecents = base.recentAppRefs.mapNotNull { ref -> apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName } }
         HomeUiState(
-            greeting = buildGreeting(base.name), apps = visibleApps, widgetVisibility = base.visibility, widgetColumns = base.columns, widgetSizes = base.sizes,
+            greeting = buildGreeting(base.name), apps = visibleApps, widgetVisibility = base.visibility, widgetColumns = base.columns, widgetSizes = base.sizes, widgetHeights = base.heights, widgetWidths = base.widths,
             examCountdowns = base.exam.exams.map { exam -> ExamCountdown(exam.id, exam.name, exam.dateMillis?.let { CountdownUtil.daysRemaining(it) }) },
             todoItems = content.todos, chapterItems = content.chapters, pdfLinks = content.pdfs,
             isFocusModeActive = base.focusActive, background = base.background, isLoadingApps = content.loading,
@@ -187,6 +196,27 @@ class HomeViewModel(
     fun cycleWidgetSize(id: String) = viewModelScope.launch {
         val current = uiState.value.widgetSizes[id] ?: WidgetSize.STANDARD
         settingsRepository.setWidgetSize(id, current.next())
+    }
+
+    fun adjustWidgetHeight(id: String, deltaDp: Int) = viewModelScope.launch {
+        val legacyHeight = (uiState.value.widgetSizes[id] ?: WidgetSize.STANDARD).minHeightDp
+        settingsRepository.setWidgetHeight(id, (uiState.value.widgetHeights[id] ?: legacyHeight) + deltaDp)
+    }
+
+    fun adjustWidgetWidth(id: String, deltaPercent: Int) = viewModelScope.launch {
+        settingsRepository.setWidgetWidth(id, (uiState.value.widgetWidths[id] ?: 100) + deltaPercent)
+    }
+
+    /** Sensible first-run categorisation; users can freely change every assignment afterwards. */
+    private fun suggestedCategory(app: AppInfo): String {
+        val identity = "${app.packageName} ${app.label}".lowercase()
+        return when {
+            listOf("youtube", "netflix", "primevideo", "hotstar", "spotify", "music", "video", "tv").any(identity::contains) -> AppCategory.ENTERTAINMENT.displayName
+            listOf("whatsapp", "telegram", "instagram", "facebook", "snapchat", "discord", "messenger", "linkedin", "x.com", "twitter").any(identity::contains) -> AppCategory.SOCIAL.displayName
+            listOf("classroom", "meet", "zoom", "notion", "docs", "drive", "khan", "coursera", "unacademy", "byju", "physicswallah", "study", "exam", "learn").any(identity::contains) -> AppCategory.STUDY.displayName
+            listOf("game", "games", "supercell", "roblox", "minecraft", "pubg", "freefire").any(identity::contains) -> AppCategory.GAMES.displayName
+            else -> AppCategory.OTHER.displayName
+        }
     }
 
     // ---------- Daily to-do ----------

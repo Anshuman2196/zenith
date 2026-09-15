@@ -54,6 +54,9 @@ class SettingsViewModel(
     val fontChoice: StateFlow<FontChoice> =
         settingsRepository.fontChoice.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FontChoice.DEFAULT)
 
+    val customFontPath: StateFlow<String?> =
+        settingsRepository.customFontPath.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     init {
         viewModelScope.launch { _iconPacks.value = appRepository.getInstalledIconPacks() }
         viewModelScope.launch { _installedApps.value = appRepository.getInstalledApps() }
@@ -86,6 +89,7 @@ class SettingsViewModel(
 
     // ---------- Font ----------
     fun setFontChoice(choice: FontChoice) = viewModelScope.launch { settingsRepository.setFontChoice(choice) }
+    fun setCustomFontPath(path: String?) = viewModelScope.launch { settingsRepository.setCustomFontPath(path) }
 
     // ---------- Icon pack ----------
     fun selectIconPack(packageName: String?) = viewModelScope.launch { settingsRepository.setIconPackPackage(packageName) }
