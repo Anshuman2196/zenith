@@ -522,10 +522,14 @@ private fun WidgetResizeGrip(
 /** A short, non-interactive reflection shown when Zenith intercepts a distraction launch. */
 @Composable
 private fun DistractionLaunchPause(secondsLeft: Int, message: String) {
+    val rotationIndex = ((7 - secondsLeft) / 2).coerceAtMost(ZenithCopy.distractionPause.lastIndex)
+    val rotatedMessage = if (ZenithCopy.distractionPause.isNotEmpty()) {
+        ZenithCopy.distractionPause[rotationIndex]
+    } else message
     ReflectionPauseSurface(
         title = "Distractions",
         secondsLeft = secondsLeft,
-        message = message,
+        message = rotatedMessage,
         ringSize = 190.dp
     )
 }
@@ -533,10 +537,15 @@ private fun DistractionLaunchPause(secondsLeft: Int, message: String) {
 /** The same full-screen reflection treatment used by the other deliberate pause moments. */
 @Composable
 private fun PomodoroReflectionPause(secondsLeft: Int, message: String) {
+    val elapsed = (7 - secondsLeft).coerceAtLeast(0)
+    val rotationIndex = (elapsed / 2).coerceAtMost(ZenithCopy.pomodoroStop.lastIndex)
+    val rotatedMessage = if (ZenithCopy.pomodoroStop.isNotEmpty()) {
+        ZenithCopy.pomodoroStop[rotationIndex]
+    } else message
     ReflectionPauseSurface(
         title = "Pomodoro",
         secondsLeft = secondsLeft,
-        message = message,
+        message = rotatedMessage,
         ringSize = 210.dp
     )
 }
@@ -601,14 +610,14 @@ private fun ReflectionPauseSurface(
  */
 @Composable
 private fun FocusModeEntryPause(onFinished: () -> Unit) {
-    var secondsLeft by remember { mutableStateOf(5) }
+    var secondsLeft by remember { mutableStateOf(8) }
     val messages = ZenithCopy.focusModeEntry
     val breathing = rememberInfiniteTransition(label = "focusEntryBreath")
     val ringScale by breathing.animateFloat(
         initialValue = 0.92f,
         targetValue = 1.08f,
         animationSpec = infiniteRepeatable(
-            tween(2600, easing = FastOutSlowInEasing),
+            tween(3600, easing = FastOutSlowInEasing),
             RepeatMode.Reverse
         ),
         label = "focusEntryBreathScale"
@@ -643,7 +652,7 @@ private fun FocusModeEntryPause(onFinished: () -> Unit) {
         ) {
             Text("A moment before focus", style = MaterialTheme.typography.titleLarge, color = Color.White)
             Text(
-                messages[(5 - secondsLeft).coerceIn(0, messages.lastIndex)],
+                messages[((8 - secondsLeft) / 2).coerceIn(0, messages.lastIndex)],
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.9f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center

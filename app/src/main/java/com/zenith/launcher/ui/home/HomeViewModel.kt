@@ -194,7 +194,7 @@ class HomeViewModel(
             (app.packageName.hashCode().ushr(1) + LocalDate.now().dayOfYear) % ZenithCopy.distractionPause.size
         ]
         _distractionPauseApp.value = app
-        _distractionPauseSeconds.value = 5
+        _distractionPauseSeconds.value = 7
         _distractionPauseMessage.value = message
         viewModelScope.launch {
             while (_distractionPauseSeconds.value > 0 && _distractionPauseApp.value === app) {
