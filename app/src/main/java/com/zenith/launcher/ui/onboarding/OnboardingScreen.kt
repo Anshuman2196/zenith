@@ -36,11 +36,14 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
@@ -53,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.data.model.WidgetVisibility
 import com.zenith.launcher.ui.settings.SettingsViewModel
@@ -77,12 +81,13 @@ fun OnboardingScreen(settingsViewModel: SettingsViewModel, onFinished: () -> Uni
         onFinished()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .navigationBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 16.dp)
-    ) {
+    CompositionLocalProvider(LocalContentColor provides androidx.compose.ui.graphics.Color.White) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -152,6 +157,7 @@ fun OnboardingScreen(settingsViewModel: SettingsViewModel, onFinished: () -> Uni
                 }
             }
         }
+        }
     }
 }
 
@@ -207,7 +213,7 @@ private fun AwarenessStep() = StepShell(
             Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
                 Text(label, modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp), style = MaterialTheme.typography.labelLarge)
             }
-            if (index < 3) Text("↓", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (index < 3) Text("↓", color = Color.White.copy(alpha = 0.72f))
         }
     }
 }
@@ -229,7 +235,7 @@ private fun AppChoiceStep(
     if (apps.isEmpty()) {
         InfoCard("You can do this later", emptyText)
     } else {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = Color.White)) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     if (selected.isEmpty()) "Nothing selected yet" else "${selected.size} selected",
@@ -293,7 +299,7 @@ private fun WidgetsStep(
     icon = { Icon(Icons.Outlined.DragHandle, contentDescription = null, modifier = Modifier.size(30.dp)) }
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = Color.White)) {
             Column(Modifier.fillMaxWidth().padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Study target", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
@@ -328,7 +334,7 @@ private fun WidgetsStep(
 
 @Composable
 private fun WidgetChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(selected = selected, onClick = onClick, label = { Text(label) }, leadingIcon = if (selected) {
+    FilterChip(selected = selected, onClick = onClick, label = { Text(label, color = Color.White) }, leadingIcon = if (selected) {
         { Icon(Icons.Outlined.Check, contentDescription = null) }
     } else null)
 }
@@ -344,15 +350,24 @@ private fun NameStep(name: String, onNameChange: (String) -> Unit) = StepShell(
         value = name,
         onValueChange = onNameChange,
         singleLine = true,
-        label = { Text("Your name") },
-        placeholder = { Text("Student") },
+        label = { Text("Your name", color = Color.White) },
+        placeholder = { Text("Student", color = Color.White.copy(alpha = 0.7f)) },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = Color.White,
+            unfocusedTextColor = Color.White,
+            focusedBorderColor = Color.White,
+            unfocusedBorderColor = Color.White.copy(alpha = 0.55f),
+            focusedLabelColor = Color.White,
+            unfocusedLabelColor = Color.White.copy(alpha = 0.8f),
+            cursorColor = Color.White
+        ),
         modifier = Modifier.fillMaxWidth()
     )
 }
 
 @Composable
 private fun InfoCard(title: String, body: String) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = Color.White)) {
         Column(Modifier.fillMaxWidth().padding(18.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(6.dp))

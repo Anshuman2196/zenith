@@ -652,7 +652,7 @@ private fun FocusModeEntryPause(onFinished: () -> Unit) {
         ) {
             Text("A moment before focus", style = MaterialTheme.typography.titleLarge, color = Color.White)
             Text(
-                messages[((8 - secondsLeft) / 2).coerceIn(0, messages.lastIndex)],
+                messages[((8 - secondsLeft) / 4).coerceIn(0, messages.lastIndex)],
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.9f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -673,12 +673,7 @@ private fun FocusModeEntryPause(onFinished: () -> Unit) {
 @Composable
 private fun FocusModeExitPause(onFinished: () -> Unit) {
     var secondsLeft by remember { mutableStateOf(18) }
-    val messages = listOf(
-        "Give yourself a moment before changing direction.",
-        "Notice what you completed before you leave this space.",
-        "Take one slow breath and let the next choice be deliberate.",
-        "You can leave focus — just notice the choice first."
-    )
+    val messages = ZenithCopy.focusExit
     val breathing = rememberInfiniteTransition(label = "focusExitBreath")
     val ringScale by breathing.animateFloat(
         initialValue = 0.88f,
@@ -716,7 +711,7 @@ private fun FocusModeExitPause(onFinished: () -> Unit) {
         ) {
             Text("Pause before leaving Focus Mode", style = MaterialTheme.typography.titleLarge, color = Color.White)
             Text(
-                messages[(18 - secondsLeft) / 5 % messages.size],
+                messages[((18 - secondsLeft) / 4).coerceIn(0, messages.lastIndex)],
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.9f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
