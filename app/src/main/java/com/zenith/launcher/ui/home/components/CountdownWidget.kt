@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.ui.home.ExamCountdown
+import com.zenith.launcher.ui.home.LauncherCopy
 
 /**
  * Widget: Exam Countdown - live "days remaining" for every exam the user has added (see
@@ -22,12 +23,12 @@ import com.zenith.launcher.ui.home.ExamCountdown
 @Composable
 fun CountdownWidget(exams: List<ExamCountdown>) {
     WidgetCard {
-        Text("Exam Countdown", style = MaterialTheme.typography.titleMedium)
+        Text("Deadlines", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(12.dp))
 
         if (exams.isEmpty()) {
             Text(
-                "No exams added yet - add one in Settings",
+                LauncherCopy.emptyDeadlines[java.time.LocalDate.now().dayOfYear % LauncherCopy.emptyDeadlines.size],
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -54,7 +55,7 @@ private fun CountdownColumn(exam: ExamCountdown) {
             color = MaterialTheme.colorScheme.primary
         )
         Text(
-            text = if (exam.daysLeft == null) "${exam.name} - set date in Settings" else "days to ${exam.name}",
+            text = if (exam.daysLeft == null) "${exam.name} - set date in Settings" else "days until ${exam.name}",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,

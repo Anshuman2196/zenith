@@ -31,14 +31,21 @@ There is no build variant or flavor setup required - one `app` module, one APK.
 
 ### Home screen
 - **3-column widget grid**, hold-and-drag to rearrange (see "Rearranging widgets" below).
-- **Widgets**: Exam Countdown, Focus Mode toggle, Milestone/Target (a goal for your next mock
-  test with a readiness gauge), Study Timer (Pomodoro + stopwatch), Daily To-Do, Chapter Backlog,
-  PDF quick-launch, App Shortcuts (pin any app for one-tap access), and a Status glance (Wi-Fi,
-  battery, connected Bluetooth device).
-- **Greeting header**: live clock + date, rotates through a few greeting phrases daily.
+- **Widgets**: Exam Countdown, Focus Mode toggle, Milestone Targets (one or more self-set goals
+  for upcoming mock tests - target score, last score, optional test date), Study Timer (Pomodoro +
+  stopwatch + multiple alarms), Daily To-Do, Chapter Backlog (each chapter tagged Low/Medium/High
+  urgency, with higher-urgency chapters pinned to the top), PDF quick-launch, App Shortcuts (pin
+  any app for one-tap access), and a Status glance (Wi-Fi, battery, connected Bluetooth device).
+- **Greeting header**: live clock + date, live weather (see Permissions below), rotates through a
+  few greeting phrases daily.
 - **Double-tap the header** to lock the screen (requires granting Device Admin once - see
   Permissions below).
 - **Right-edge swipe** opens the App Drawer. **Left-edge swipe** opens the Recent Apps deck.
+- **A running Pomodoro session locks the rest of Home.** While the Study Timer's Pomodoro mode is
+  actually counting down, every widget except Milestone Targets, Daily To-Do, and Chapter Backlog
+  is blurred and unresponsive, the grid can't be rearranged, the Settings gear is disabled, the App
+  Drawer edge-swipe is disabled, and the Study Timer itself can't be switched to Stopwatch or
+  Alarm. The lock lifts the moment the session is completed, paused, or reset.
 
 ### App Drawer
 Every installed app, grouped under categories (Study / Games / Social / Entertainment / Other -
@@ -96,8 +103,9 @@ app/src/main/java/com/zenith/launcher/
   one state object and never touch the repository/DataStore layer directly.
 - **Persistence**: everything is a value in a single `DataStore<Preferences>` (see
   `PreferencesManager`) - lists/maps are stored as JSON strings via `kotlinx.serialization`.
-- **No network, no analytics, no third-party backend.** Every permission below exists to talk to
-  the Android OS directly, not to any external service.
+- **No analytics, no third-party backend.** The one exception is the Home header's live weather
+  reading, which calls the free, key-less Open-Meteo API using the device's coarse location -
+  every other permission below exists purely to talk to the Android OS directly.
 
 ## Permissions this app requests, and why
 
@@ -107,11 +115,13 @@ app/src/main/java/com/zenith/launcher/
 | `ACCESS_NETWORK_STATE` | The Status widget's Wi-Fi connected/disconnected indicator. |
 | `SET_WALLPAPER` | Syncing your chosen Home background photo to the actual system/Lock Screen wallpaper (opt-in toggle in Settings). |
 | `BLUETOOTH` / `BLUETOOTH_CONNECT` | The Status widget's "connected Bluetooth device" row. Requested at runtime on Android 12+; the app works fine if you deny it, that row just stays hidden. |
+| `ACCESS_COARSE_LOCATION` | The Home header's live weather reading (see `WeatherHelper.kt`) - a coarse fix is all a temperature needs. Requested at runtime once per Home visit; declining just leaves the row showing "—°". |
+| `INTERNET` | Required to reach Open-Meteo for that same weather reading - the only network call anywhere in Zenith. |
 | Device Admin (via `ZenithDeviceAdminReceiver`) | Only requested if you turn on "double-tap to lock" in Settings > Gestures. Used solely for `DevicePolicyManager.lockNow()` - the app requests no other admin policy (no password rules, no wipe, nothing else). |
 
 Nothing here is requested at install time except `QUERY_ALL_PACKAGES`/`ACCESS_NETWORK_STATE`/
-`SET_WALLPAPER` (normal permissions); Bluetooth and Device Admin are both opt-in, asked for only
-when you turn on the feature that needs them.
+`SET_WALLPAPER`/`INTERNET` (normal permissions); Bluetooth, location, and Device Admin are all
+opt-in, asked for only when you turn on (or use) the feature that needs them.
 
 ## Known limitations
 
@@ -127,8 +137,14 @@ when you turn on the feature that needs them.
 - **Bluetooth battery level** is read via a hidden, undocumented `BluetoothDevice` method that
   exists on stock Android but isn't guaranteed by every OEM - if it's unavailable, the Status
   widget just shows the device name without a battery percentage.
-- **Custom font upload** (importing your own `.ttf`/`.otf`) isn't implemented yet - Settings >
-  Appearance currently offers four built-in type faces (Classic, Elegant, Playful, Technical).
+- **Custom font upload** (`.ttf`/`.otf`) is supported from Settings > Appearance via the system
+  file picker, alongside the four built-in typefaces (Classic, Elegant, Playful, Technical).
+- **Alarms don't survive a device reboot.** They're scheduled with `AlarmManager`, which Android
+  clears on restart; there's no boot-time receiver re-registering them yet, so a scheduled alarm
+  needs the Study Timer's Alarm tab to be opened at least once after a reboot to be re-armed.
+- **Weather needs a location fix and connectivity.** On a fresh install (or with location services
+  off), the header may keep showing "—°" until the device has produced any location fix at all -
+  Zenith doesn't request a high-accuracy GPS fix, only a coarse/network one.
 
 ## Low-memory considerations
 

@@ -3,6 +3,7 @@ package com.zenith.launcher.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zenith.launcher.data.model.AppCategory
+import com.zenith.launcher.data.model.AttentionProtectionMode
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.ExamSettings
@@ -29,9 +30,11 @@ data class SettingsUiState(
     val widgetVisibility: WidgetVisibility = WidgetVisibility(),
     val installedApps: List<AppInfo> = emptyList(), // used by the Focus Mode app picker + App Categories
     val focusAllowedApps: Set<String> = emptySet(),
+    val distractionApps: Set<String> = emptySet(),
     val background: BackgroundSettings = BackgroundSettings(),
     val syncLockScreenWallpaper: Boolean = true,
     val lockOnDoubleTap: Boolean = false,
+    val attentionProtectionMode: AttentionProtectionMode = AttentionProtectionMode.STRONG,
     val appCategories: Map<String, String> = emptyMap(),
     val appCategoryTypes: List<String> = emptyList()
 )
@@ -71,9 +74,11 @@ class SettingsViewModel(
         .combine(settingsRepository.widgetVisibility) { state, visibility -> state.copy(widgetVisibility = visibility) }
         .combine(_installedApps) { state, apps -> state.copy(installedApps = apps) }
         .combine(settingsRepository.focusAllowedApps) { state, allowed -> state.copy(focusAllowedApps = allowed) }
+        .combine(settingsRepository.distractionApps) { state, distractions -> state.copy(distractionApps = distractions) }
         .combine(settingsRepository.backgroundSettings) { state, background -> state.copy(background = background) }
         .combine(settingsRepository.syncLockScreenWallpaper) { state, sync -> state.copy(syncLockScreenWallpaper = sync) }
         .combine(settingsRepository.lockOnDoubleTap) { state, enabled -> state.copy(lockOnDoubleTap = enabled) }
+        .combine(settingsRepository.attentionProtectionMode) { state, mode -> state.copy(attentionProtectionMode = mode) }
         .combine(settingsRepository.appCategories) { state, categories -> state.copy(appCategories = categories) }
         .combine(settingsRepository.appCategoryTypes) { state, types -> state.copy(appCategoryTypes = types) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
@@ -106,6 +111,13 @@ class SettingsViewModel(
         settingsRepository.setFocusAllowedApps(updated)
     }
 
+    // ---------- Distraction apps ----------
+    fun toggleDistractionApp(packageName: String) = viewModelScope.launch {
+        val current = uiState.value.distractionApps
+        val updated = if (packageName in current) current - packageName else current + packageName
+        settingsRepository.setDistractionApps(updated)
+    }
+
     // ---------- Background customization ----------
     fun setBackgroundImage(uriString: String?) = viewModelScope.launch {
         settingsRepository.setBackgroundImageUri(uriString)
@@ -129,6 +141,8 @@ class SettingsViewModel(
 
     // ---------- Double-tap to lock ----------
     fun setLockOnDoubleTap(enabled: Boolean) = viewModelScope.launch { settingsRepository.setLockOnDoubleTap(enabled) }
+
+    fun setAttentionProtectionMode(mode: AttentionProtectionMode) = viewModelScope.launch { settingsRepository.setAttentionProtectionMode(mode) }
 
     // ---------- App Drawer categories ----------
     fun setAppCategory(packageName: String, category: String) = viewModelScope.launch { settingsRepository.setAppCategory(packageName, category) }

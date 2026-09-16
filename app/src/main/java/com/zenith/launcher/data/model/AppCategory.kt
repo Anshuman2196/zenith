@@ -35,6 +35,7 @@ val defaultAppCategoryTypes: List<String> = listOf(
     AppCategory.ENTERTAINMENT.displayName,
     AppCategory.GAMES.displayName,
     "Media",
+    "Storage",
     "Internet",
     "Development",
     "Finance",

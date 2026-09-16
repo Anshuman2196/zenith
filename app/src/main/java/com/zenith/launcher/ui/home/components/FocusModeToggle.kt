@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.zenith.launcher.ui.home.LauncherCopy
 
 /**
  * Widget: Focus Mode Toggle.
@@ -27,7 +28,7 @@ fun FocusModeToggle(isActive: Boolean, onToggle: () -> Unit) {
             Column {
                 Text("Focus Mode", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = if (isActive) "Only allowed apps are visible" else "All apps visible",
+                    text = if (isActive) LauncherCopy.focusMode[0] else LauncherCopy.focusModeOff[0],
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -17,6 +17,6 @@ val DarkSurface = Color(0xFF1C1C1C)
 val LightBackground = Color(0xFFFAF9F7)
 val LightSurface = Color(0xFFFFFFFF)
 
-// Semantic accents used inside widgets (e.g. ChapterStatus color-coding).
+// Semantic accents used inside widgets (e.g. ChapterUrgency color-coding).
 val AccentWarning = Color(0xFFE0A84C)
 val AccentDanger = Color(0xFFD9695F)

@@ -14,6 +14,12 @@
     <!-- System Status widget: Wi-Fi connectivity state. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Home header's Weather row (WeatherHelper.kt): a coarse fix is all that's needed for a
+         temperature reading, and INTERNET is required to reach Open-Meteo - the only network
+         call anywhere in Zenith. Declining the runtime prompt just leaves the row showing "—°". -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Syncing the chosen background photo to the actual Home/Lock screen wallpaper. -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
 

@@ -101,12 +101,17 @@ private const val DRAWER_SWIPE_OPEN_THRESHOLD_PX = 60f
  */
 private val EDGE_SWIPE_STRIP_WIDTH = 12.dp
 
-/** These productive widgets stay readable while a Pomodoro is in progress. */
-private val POMODORO_BLUR_EXEMPT_WIDGETS = setOf(
+/**
+ * Only these widgets stay usable while a Pomodoro focus session is running - every other widget
+ * is blurred *and* has its touches blocked (see the grid loop in [HomeScreen]), the Settings
+ * gear and the App Drawer edge-swipe are disabled, and the grid can't be rearranged. The lock
+ * lifts the moment the session is completed, paused, or reset (i.e. whenever the Pomodoro
+ * widget itself reports back that it's no longer running).
+ */
+private val POMODORO_ACCESSIBLE_WIDGETS = setOf(
     WidgetIds.POMODORO,
     WidgetIds.TODO,
-    WidgetIds.CHAPTER_BACKLOG,
-    WidgetIds.PDF_LAUNCHER
+    WidgetIds.CHAPTER_BACKLOG
 )
 
 /**
@@ -124,6 +129,24 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
     var isDrawerOpen by remember { mutableStateOf(false) }
     var isPomodoroRunning by remember { mutableStateOf(false) }
     var showFocusExitPause by remember { mutableStateOf(false) }
+    var isPomodoroProtectionActive by remember { mutableStateOf(false) }
+
+    // Protect only deliberate focus/reflection windows, not the whole Pomodoro. This keeps the
+    // Android system surface available during ordinary study time while closing the escape hatch
+    // during moments when Zenith is asking the student to pause and choose deliberately.
+    val systemUiProtected = state.isFocusModeActive || showFocusExitPause ||
+        state.distractionPauseSeconds > 0 || isPomodoroProtectionActive
+    val window = (context as? android.app.Activity)?.window
+    LaunchedEffect(systemUiProtected, state.attentionProtectionMode, window) {
+        window?.let {
+            SystemActionsHelper.setAttentionProtection(
+                window = it,
+                context = context,
+                mode = state.attentionProtectionMode,
+                protected = systemUiProtected
+            )
+        }
+    }
 
     val visibleColumns = remember(state.widgetColumns, state.widgetVisibility) {
         state.widgetColumns.map { column ->
@@ -193,10 +216,13 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
         ) {
             GreetingHeader(
                 greeting = state.greeting,
+                // The Settings gear is one of the things a running Pomodoro session locks out -
+                // disabled (not hidden) so it's clear why it's unresponsive, and the header
+                // itself is left crisp rather than blurred like the rest of the locked screen.
                 onSettingsClick = onOpenSettings,
+                settingsEnabled = !isPomodoroRunning,
                 overPhotoBackground = state.background.imageUri != null,
-                lockOnDoubleTap = state.lockOnDoubleTap,
-                modifier = Modifier.blur(if (isPomodoroRunning) 10.dp else 0.dp)
+                lockOnDoubleTap = state.lockOnDoubleTap
             )
 
             Box(modifier = Modifier.weight(1f)) {
@@ -245,6 +271,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                 // whatever now sits in the old slot.
                                 key(id) {
                                     val isDragging = dragState.isDragging(id)
+                                    val isLockedByPomodoro = isPomodoroRunning && id !in POMODORO_ACCESSIBLE_WIDGETS
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -252,12 +279,14 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                             // hand, while its ghost (below) does the floating -
                                             // see GridDragDropState's class doc for why.
                                             .alpha(if (isDragging) 0f else 1f)
-                                            .gridDragToReorder(dragState, id)
+                                            // The whole grid is frozen in place for the duration of
+                                            // a Pomodoro session - not just the locked-out widgets -
+                                            // so the layout can't shift under the three that remain
+                                            // usable.
                                             .then(
-                                                if (isPomodoroRunning && id !in POMODORO_BLUR_EXEMPT_WIDGETS) {
-                                                    Modifier.blur(10.dp)
-                                                } else Modifier
+                                                if (isPomodoroRunning) Modifier else Modifier.gridDragToReorder(dragState, id)
                                             )
+                                            .then(if (isLockedByPomodoro) Modifier.blur(22.dp) else Modifier)
                                             .height((state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160).coerceIn(88, 600).dp)
                                     ) {
                                         WidgetForId(
@@ -271,8 +300,21 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                                 if (state.isFocusModeActive) showFocusExitPause = true
                                                 else viewModel.toggleFocusMode()
                                             },
-                                            onPomodoroRunningChanged = { isPomodoroRunning = it }
+                                            onPomodoroRunningChanged = { isPomodoroRunning = it },
+                                            onPomodoroProtectionChanged = { isPomodoroProtectionActive = it }
                                         )
+                                        if (isLockedByPomodoro) {
+                                            // Keep locked widgets recognizable but visually subordinate:
+                                            // the stronger blur makes the active Pomodoro surface feel like
+                                            // the only thing that matters, while the soft veil preserves
+                                            // enough context to remind the student that the rest still exists.
+                                            Box(
+                                                modifier = Modifier
+                                                    .matchParentSize()
+                                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.24f))
+                                                    .pointerInput(id) { detectTapGestures { } }
+                                            )
+                                        }
                                         if (dragState.editMode) {
                                             WidgetResizeGrip(
                                                 onHeightDelta = { viewModel.adjustWidgetHeight(id, it) },
@@ -313,8 +355,10 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
         // Sized to sit exactly within the grid Row's own outer padding (see the Row above) so it
         // never overlaps a widget's actual touch area - previously it was wider than that margin
         // and could steal the very first pixels of a drag starting from the rightmost column.
-        // It's also fully disabled while rearranging, so it can never compete with a drag at all.
-        if (!isDrawerOpen && !dragState.editMode) {
+        // It's also fully disabled while rearranging, so it can never compete with a drag at all -
+        // and disabled for the duration of a running Pomodoro session, since the App Drawer isn't
+        // one of the widgets a session leaves accessible.
+        if (!isDrawerOpen && !dragState.editMode && !isPomodoroRunning) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
@@ -361,6 +405,14 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                 viewModel.toggleFocusMode()
             })
         }
+
+        state.distractionPauseApp?.let { app ->
+            DistractionLaunchPause(
+                appName = app.label,
+                secondsLeft = state.distractionPauseSeconds,
+                message = state.distractionPauseMessage
+            )
+        }
     }
 
     if (showAddTodoDialog) {
@@ -372,8 +424,8 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
     if (showAddChapterDialog) {
         AddChapterDialog(
             onDismiss = { showAddChapterDialog = false },
-            onConfirm = { subject, chapter, status ->
-                viewModel.addChapter(subject, chapter, status)
+            onConfirm = { subject, chapter, urgency ->
+                viewModel.addChapter(subject, chapter, urgency)
                 showAddChapterDialog = false
             }
         )
@@ -421,6 +473,65 @@ private fun WidgetResizeGrip(
     }
 }
 
+/** A short, non-interactive pause shown before a user-configured distraction app opens. */
+@Composable
+private fun DistractionLaunchPause(appName: String, secondsLeft: Int, message: String) {
+    val breathing = rememberInfiniteTransition(label = "distractionPauseBreath")
+    val ringScale by breathing.animateFloat(
+        initialValue = 0.92f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            tween(2200, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse
+        ),
+        label = "distractionPauseBreathScale"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.78f))
+            .pointerInput(Unit) { detectTapGestures { } },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(190.dp)
+                .graphicsLayer { scaleX = ringScale; scaleY = ringScale }
+                .clip(RoundedCornerShape(95.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+        )
+        Column(
+            modifier = Modifier.padding(horizontal = 34.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                LauncherCopy.distractionPauseTitle,
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White
+            )
+            Text(
+                message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White.copy(alpha = 0.9f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Text(
+                "$appName · opening in ${secondsLeft.coerceAtLeast(0)} s",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                LauncherCopy.distractionPauseFooter,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+        }
+    }
+}
+
 /**
  * A deliberately non-interactive pause before ending Focus Mode. It is not a confirmation:
  * after a short breathing interval the mode is switched off automatically.
@@ -429,10 +540,10 @@ private fun WidgetResizeGrip(
 private fun FocusModeExitPause(onFinished: () -> Unit) {
     var secondsLeft by remember { mutableStateOf(18) }
     val messages = listOf(
-        "Are you sure you want to do this?",
-        "Was your session good enough?",
-        "Take one slow breath before you leave focus.",
-        "Notice what you completed — then return with intention."
+        "Give yourself a moment before changing direction.",
+        "Notice what you completed before you leave this space.",
+        "Take one slow breath and let the next choice be deliberate.",
+        "You can leave focus — just notice the choice first."
     )
     val breathing = rememberInfiniteTransition(label = "focusExitBreath")
     val ringScale by breathing.animateFloat(
@@ -569,12 +680,20 @@ private fun WidgetForId(
     onShowAddChapter: () -> Unit,
     onShowAddPdf: () -> Unit,
     onFocusToggle: () -> Unit = {},
-    onPomodoroRunningChanged: (Boolean) -> Unit = {}
+    onPomodoroRunningChanged: (Boolean) -> Unit = {},
+    onPomodoroProtectionChanged: (Boolean) -> Unit = {}
 ) {
     when (id) {
         WidgetIds.COUNTDOWN -> CountdownWidget(state.examCountdowns)
         WidgetIds.FOCUS_MODE -> FocusModeToggle(state.isFocusModeActive, onFocusToggle)
-        WidgetIds.POMODORO -> PomodoroWidget(onPomodoroRunningChanged)
+        WidgetIds.POMODORO -> PomodoroWidget(
+            alarms = state.alarms,
+            onAddAlarm = viewModel::addAlarm,
+            onToggleAlarm = viewModel::toggleAlarm,
+            onDeleteAlarm = viewModel::deleteAlarm,
+            onPomodoroRunningChanged = onPomodoroRunningChanged,
+            onPomodoroProtectionChanged = onPomodoroProtectionChanged
+        )
         WidgetIds.TODO -> TodoWidget(
             items = state.todoItems,
             onAddClick = onShowAddTodo,
@@ -592,8 +711,10 @@ private fun WidgetForId(
             onDelete = viewModel::deletePdfLink
         )
         WidgetIds.MILESTONE -> MilestoneWidget(
-            target = state.milestoneTarget,
-            onChange = viewModel::setMilestoneTarget
+            targets = state.milestoneTargets,
+            onAdd = viewModel::addMilestoneTarget,
+            onChange = viewModel::updateMilestoneTarget,
+            onDelete = viewModel::deleteMilestoneTarget
         )
         WidgetIds.APP_SHORTCUTS -> AppShortcutsWidget(
             pinnedApps = state.appShortcuts,

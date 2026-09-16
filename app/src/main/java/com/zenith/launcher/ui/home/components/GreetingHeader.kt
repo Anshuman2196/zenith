@@ -1,5 +1,8 @@
 package com.zenith.launcher.ui.home.components
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +18,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,6 +34,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.util.SystemActionsHelper
+import com.zenith.launcher.util.WeatherHelper
+import com.zenith.launcher.util.WeatherInfo
+import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 
 /**
  * Top header, matching the reference design: the aspirant's name is centered across the full
@@ -41,6 +53,9 @@ import com.zenith.launcher.util.SystemActionsHelper
  *
  * [lockOnDoubleTap] (a Settings toggle) makes double-tapping anywhere in the header - the same
  * gesture several stock launchers use - lock the screen via [SystemActionsHelper.lockScreen].
+ *
+ * [settingsEnabled] disables (dims, but doesn't hide) the gear icon - used while a Pomodoro
+ * session has locked the rest of Home.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -49,6 +64,7 @@ fun GreetingHeader(
     onSettingsClick: () -> Unit,
     overPhotoBackground: Boolean = false,
     lockOnDoubleTap: Boolean = false,
+    settingsEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -66,17 +82,11 @@ fun GreetingHeader(
             .padding(top = 24.dp, start = 20.dp, end = 8.dp, bottom = 4.dp)
             .then(if (lockOnDoubleTap) Modifier.combinedClickable(onClick = {}, onDoubleClick = { SystemActionsHelper.lockScreen(context) }) else Modifier)
     ) {
-        Row(
-            modifier = Modifier.align(Alignment.CenterStart),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Icon(Icons.Default.WbSunny, contentDescription = "Weather", tint = textColor, modifier = Modifier.size(18.dp))
-            Column {
-                Text("Weather", style = MaterialTheme.typography.labelSmall, color = secondaryTextColor)
-                Text("—°", style = MaterialTheme.typography.bodyMedium, color = textColor)
-            }
-        }
+        WeatherStatus(
+            textColor = textColor,
+            secondaryTextColor = secondaryTextColor,
+            modifier = Modifier.align(Alignment.CenterStart)
+        )
         Text(
             text = greeting,
             style = MaterialTheme.typography.headlineMedium.copy(shadow = textShadow),
@@ -98,13 +108,63 @@ fun GreetingHeader(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             InlineClock(timeColor = textColor, dateColor = secondaryTextColor)
-            IconButton(onClick = onSettingsClick) {
+            IconButton(onClick = onSettingsClick, enabled = settingsEnabled) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = "Launcher settings",
                     tint = textColor
                 )
             }
+        }
+    }
+}
+
+/**
+ * Live current-temperature reading, replacing what used to be a permanent "—°" placeholder. Asks
+ * for coarse location once per Home visit (declining just leaves the placeholder showing - it's
+ * never asked again until the process restarts, same as [SystemStatusWidget]'s Bluetooth
+ * permission), then refreshes every 30 minutes via [WeatherHelper] - the only network call
+ * anywhere in Zenith. See the README's Permissions section.
+ */
+@Composable
+private fun WeatherStatus(textColor: Color, secondaryTextColor: Color, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var hasLocationPermission by remember { mutableStateOf(WeatherHelper.hasLocationPermission(context)) }
+    var weather by remember { mutableStateOf<WeatherInfo?>(null) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasLocationPermission = granted
+    }
+    LaunchedEffect(Unit) {
+        if (!hasLocationPermission) permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+    }
+
+    LaunchedEffect(hasLocationPermission) {
+        if (!hasLocationPermission) return@LaunchedEffect
+        while (true) {
+            weather = WeatherHelper.fetchCurrentWeather(context) ?: weather
+            delay(30 * 60 * 1000L)
+        }
+    }
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Icon(
+            imageVector = weather?.let { WeatherHelper.iconFor(it.weatherCode) } ?: Icons.Default.WbSunny,
+            contentDescription = "Weather",
+            tint = textColor,
+            modifier = Modifier.size(18.dp)
+        )
+        Column {
+            Text("Weather", style = MaterialTheme.typography.labelSmall, color = secondaryTextColor)
+            Text(
+                text = weather?.let { "${it.temperatureCelsius.roundToInt()}°" } ?: "—°",
+                style = MaterialTheme.typography.bodyMedium,
+                color = textColor
+            )
         }
     }
 }

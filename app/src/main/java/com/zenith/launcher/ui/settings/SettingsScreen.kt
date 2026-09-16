@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.ui.settings.components.AppCategorySettingsSection
 import com.zenith.launcher.ui.settings.components.AppsControlCenterSection
+import com.zenith.launcher.ui.settings.components.AttentionProtectionSection
 import com.zenith.launcher.ui.settings.components.BackgroundSettingsSection
 import com.zenith.launcher.ui.settings.components.ExamSettingsSection
 import com.zenith.launcher.ui.settings.components.FocusModeAppsSection
@@ -52,7 +53,7 @@ private enum class SettingsCategory(val title: String, val subtitle: String, val
     PROFILE_EXAMS("Profile & Exams", "Your name and the exams you're tracking", Icons.Default.Person),
     APPEARANCE("Appearance", "Theme, font, icon pack, wallpaper", Icons.Default.Palette),
     WIDGETS("Widgets", "Choose what shows up on Home", Icons.Default.Widgets),
-    GESTURES("Gestures & System", "Lock screen and gestures", Icons.Default.SwipeRight),
+    GESTURES("Gestures & System", "Protect attention and control system surfaces", Icons.Default.SwipeRight),
     APPS("Apps", "Focus Mode and App Drawer categories", Icons.Default.Apps)
 }
 
@@ -140,6 +141,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         onLockOnDoubleTapChange = viewModel::setLockOnDoubleTap
                     )
                 }
+                item {
+                    AttentionProtectionSection(
+                        selected = state.attentionProtectionMode,
+                        onSelect = viewModel::setAttentionProtectionMode
+                    )
+                }
             }
             SettingsCategory.APPS -> LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
@@ -150,9 +157,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     AppsControlCenterSection(
                         apps = state.installedApps,
                         allowedPackages = state.focusAllowedApps,
+                        distractionPackages = state.distractionApps,
                         categories = state.appCategories,
                         categoryTypes = state.appCategoryTypes,
                         onToggleAllowed = viewModel::toggleFocusAllowedApp,
+                        onToggleDistraction = viewModel::toggleDistractionApp,
                         onSetCategory = viewModel::setAppCategory,
                         onAddCategory = viewModel::addAppCategoryType
                     )

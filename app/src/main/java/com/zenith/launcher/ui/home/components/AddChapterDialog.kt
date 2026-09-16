@@ -17,17 +17,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.zenith.launcher.data.model.ChapterStatus
+import com.zenith.launcher.data.model.ChapterUrgency
 
 /** Dialog for adding one item to the Chapter Backlog widget. */
 @Composable
 fun AddChapterDialog(
     onDismiss: () -> Unit,
-    onConfirm: (subject: String, chapter: String, status: ChapterStatus) -> Unit
+    onConfirm: (subject: String, chapter: String, urgency: ChapterUrgency) -> Unit
 ) {
     var subject by remember { mutableStateOf("") }
     var chapter by remember { mutableStateOf("") }
-    var status by remember { mutableStateOf(ChapterStatus.PENDING) }
+    var urgency by remember { mutableStateOf(ChapterUrgency.MEDIUM) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -45,13 +45,13 @@ fun AddChapterDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Text("Status", style = MaterialTheme.typography.labelLarge)
+                Text("Urgency", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ChapterStatus.entries.forEach { option ->
+                    ChapterUrgency.entries.forEach { option ->
                         FilterChip(
-                            selected = status == option,
-                            onClick = { status = option },
-                            label = { Text(option.name.lowercase().replace('_', ' ')) }
+                            selected = urgency == option,
+                            onClick = { urgency = option },
+                            label = { Text(option.name.lowercase().replaceFirstChar(Char::uppercase)) }
                         )
                     }
                 }
@@ -59,7 +59,7 @@ fun AddChapterDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(subject.ifBlank { "General" }, chapter, status) },
+                onClick = { onConfirm(subject.ifBlank { "General" }, chapter, urgency) },
                 enabled = chapter.isNotBlank()
             ) { Text("Add") }
         },

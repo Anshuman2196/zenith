@@ -2,9 +2,13 @@ package com.zenith.launcher.data.model
 
 import kotlinx.serialization.Serializable
 
-/** Simple status used for color-coding a chapter in the backlog widget. */
+/**
+ * How urgently a backlog chapter needs attention - drives both its color-coding and its sort
+ * position in the widget (higher urgency sorts to the top). Enum declaration order matters here:
+ * [ChapterUrgency.ordinal] is used directly for the top-first sort.
+ */
 @Serializable
-enum class ChapterStatus { PENDING, REVISION, WEAK_AREA }
+enum class ChapterUrgency { LOW, MEDIUM, HIGH }
 
 /** One chapter/topic tracked in the "Chapter Backlog" widget. */
 @Serializable
@@ -12,5 +16,5 @@ data class ChapterItem(
     val id: String,
     val subject: String,       // e.g. "Physics", "Chemistry", "Maths"
     val chapterName: String,   // e.g. "Rotational Mechanics"
-    val status: ChapterStatus = ChapterStatus.PENDING
+    val urgency: ChapterUrgency = ChapterUrgency.MEDIUM
 )

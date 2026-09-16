@@ -15,21 +15,26 @@ import com.zenith.launcher.data.model.AppInfo
 fun AppsControlCenterSection(
     apps: List<AppInfo>,
     allowedPackages: Set<String>,
+    distractionPackages: Set<String>,
     categories: Map<String, String>,
     categoryTypes: List<String>,
     onToggleAllowed: (String) -> Unit,
+    onToggleDistraction: (String) -> Unit,
     onSetCategory: (String, String) -> Unit,
     onAddCategory: (String) -> Unit
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     SettingsSectionCard(title = "Apps control centre") {
-        Text("Manage what Focus Mode keeps available and how every app appears in your drawer.")
+        Text("Choose what stays available in Focus Mode, what gets a five-second pause, and how apps are organized.")
         TabRow(selectedTabIndex = tab) {
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Focus Mode") })
-            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Drawer") })
+            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Pause") })
+            Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Drawer") })
         }
         if (tab == 0) {
             FocusModeAppsSection(apps, allowedPackages, onToggleAllowed, showCard = false)
+        } else if (tab == 1) {
+            DistractionAppsSection(apps, distractionPackages, onToggleDistraction, showCard = false)
         } else {
             AppCategorySettingsSection(apps, categories, categoryTypes, onSetCategory, onAddCategory, showCard = false)
         }

@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.zenith.launcher.data.model.AppInfo
+import com.zenith.launcher.ui.home.LauncherCopy
 
 /**
  * Widget: "App Shortcuts" - a handful of apps pinned for one-tap access without leaving Home or
@@ -74,7 +75,7 @@ fun AppShortcutsWidget(
 
         if (pinnedApps.isEmpty()) {
             Text(
-                "No apps pinned yet - tap + to add one",
+                LauncherCopy.emptyShortcuts[java.time.LocalDate.now().dayOfYear % LauncherCopy.emptyShortcuts.size],
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

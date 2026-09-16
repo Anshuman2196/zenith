@@ -42,7 +42,7 @@ object WidgetIds {
     val DEFAULT_HEIGHTS: Map<String, Int> = mapOf(
         COUNTDOWN to 112,
         FOCUS_MODE to 112,
-        MILESTONE to 158,
+        MILESTONE to 190,
         POMODORO to 430,
         SYSTEM_STATUS to 150,
         TODO to 190,

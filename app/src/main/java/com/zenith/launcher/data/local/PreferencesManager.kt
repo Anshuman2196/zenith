@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.zenith.launcher.data.model.AlarmItem
+import com.zenith.launcher.data.model.AttentionProtectionMode
 import com.zenith.launcher.data.model.AppCategory
 import com.zenith.launcher.data.model.defaultAppCategoryTypes
 import com.zenith.launcher.data.model.displayName
@@ -25,6 +27,14 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.parseToJsonElement
 
 /** Single top-level DataStore instance for the whole app process. */
 private val Context.dataStore by preferencesDataStore(name = "launcher_settings")
@@ -62,16 +72,19 @@ class PreferencesManager(private val context: Context) {
         // Renamed from the old "blocked apps" key: Focus Mode is now an allow-list (pick the
         // apps you WANT visible while focused), so this deliberately doesn't reuse the old key.
         val FOCUS_ALLOWED_APPS = stringPreferencesKey("focus_allowed_apps_json")
+        val DISTRACTION_APPS = stringPreferencesKey("distraction_apps_json")
         val BACKGROUND_IMAGE_URI = stringPreferencesKey("background_image_uri")
         val BACKGROUND_COLOR = longPreferencesKey("background_color_argb")
         val SYNC_LOCK_SCREEN_WALLPAPER = booleanPreferencesKey("sync_lock_screen_wallpaper")
         val MILESTONE_TARGET = stringPreferencesKey("milestone_target_json")
+        val ALARMS = stringPreferencesKey("alarms_json")
         val APP_SHORTCUTS = stringPreferencesKey("app_shortcuts_json")
         val RECENT_APPS = stringPreferencesKey("recent_apps_json")
         val APP_CATEGORIES = stringPreferencesKey("app_categories_json")
         val APP_CATEGORY_TYPES = stringPreferencesKey("app_category_types_json")
         val APP_CATEGORY_AUTOFILL_VERSION = stringPreferencesKey("app_category_autofill_version")
         val LOCK_ON_DOUBLE_TAP = booleanPreferencesKey("lock_on_double_tap")
+        val ATTENTION_PROTECTION_MODE = stringPreferencesKey("attention_protection_mode")
     }
 
     // ---------- Profile ----------
@@ -241,12 +254,42 @@ class PreferencesManager(private val context: Context) {
     // ---------- Chapter backlog ----------
 
     val chapterList: Flow<List<ChapterItem>> = context.dataStore.data.map { prefs ->
-        prefs[Keys.CHAPTER_LIST]?.let { runCatching { json.decodeFromString<List<ChapterItem>>(it) }.getOrNull() } ?: emptyList()
+        prefs[Keys.CHAPTER_LIST]
+            ?.let { runCatching { json.decodeFromString<List<ChapterItem>>(migrateChapterUrgencyJson(it)) }.getOrNull() }
+            ?: emptyList()
     }
 
     suspend fun setChapterList(items: List<ChapterItem>) {
         context.dataStore.edit { it[Keys.CHAPTER_LIST] = json.encodeToString(items) }
     }
+
+    /**
+     * Pre-urgency installs stored each chapter's priority as a "status" enum (PENDING/REVISION/
+     * WEAK_AREA) rather than today's "urgency" (LOW/MEDIUM/HIGH). Rewrites that field before
+     * decoding rather than just letting it fall back to the modern default for every old item,
+     * so the old signal isn't thrown away: a weak area is the most urgent to revisit (HIGH), a
+     * chapter already flagged for revision is the least urgent of the three (LOW), and a merely
+     * pending chapter sits in between (MEDIUM, also the modern default). Anything already in the
+     * current shape (no "status" key) - or anything this can't parse at all - passes through
+     * unchanged, and the caller's own `runCatching` is the final safety net.
+     */
+    private fun migrateChapterUrgencyJson(raw: String): String = runCatching {
+        val items = json.parseToJsonElement(raw).jsonArray.map { element ->
+            val obj = element.jsonObject
+            val legacyStatus = obj["status"]?.jsonPrimitive?.contentOrNull
+            if (legacyStatus == null) {
+                element
+            } else {
+                val urgency = when (legacyStatus) {
+                    "WEAK_AREA" -> "HIGH"
+                    "REVISION" -> "LOW"
+                    else -> "MEDIUM"
+                }
+                JsonObject(obj.toMutableMap().apply { remove("status"); put("urgency", JsonPrimitive(urgency)) })
+            }
+        }
+        JsonArray(items).toString()
+    }.getOrDefault(raw)
 
     // ---------- PDF quick-launch links ----------
 
@@ -278,6 +321,17 @@ class PreferencesManager(private val context: Context) {
 
     suspend fun setFocusAllowedApps(packages: Set<String>) {
         context.dataStore.edit { it[Keys.FOCUS_ALLOWED_APPS] = json.encodeToString(packages.toList()) }
+    }
+
+    /** Apps the user identifies as distractions. Launching them gets a short reflective pause. */
+    val distractionApps: Flow<Set<String>> = context.dataStore.data.map { prefs ->
+        prefs[Keys.DISTRACTION_APPS]
+            ?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
+            ?.toSet() ?: emptySet()
+    }
+
+    suspend fun setDistractionApps(packages: Set<String>) {
+        context.dataStore.edit { it[Keys.DISTRACTION_APPS] = json.encodeToString(packages.toList()) }
     }
 
     // ---------- Background customization ----------
@@ -322,16 +376,34 @@ class PreferencesManager(private val context: Context) {
         context.dataStore.edit { it[Keys.SYNC_LOCK_SCREEN_WALLPAPER] = enabled }
     }
 
-    // ---------- Milestone / target (next mock test goal) ----------
+    // ---------- Milestone targets (multiple mock-test goals) ----------
 
-    val milestoneTarget: Flow<MilestoneTarget> = context.dataStore.data.map { prefs ->
-        prefs[Keys.MILESTONE_TARGET]
-            ?.let { runCatching { json.decodeFromString<MilestoneTarget>(it) }.getOrNull() }
-            ?: MilestoneTarget()
+    /**
+     * Tries the current `List<MilestoneTarget>` shape first; if that fails, falls back to
+     * decoding a single pre-multi-target `MilestoneTarget` object (the shape this key held
+     * before multiple targets were supported) and wraps it in a one-item list, so upgrading
+     * doesn't lose an existing target. [MilestoneTarget.id] defaults to "default" specifically
+     * so that old JSON - which predates the id field - still decodes successfully here.
+     */
+    val milestoneTargets: Flow<List<MilestoneTarget>> = context.dataStore.data.map { prefs ->
+        val raw = prefs[Keys.MILESTONE_TARGET]
+        raw?.let { runCatching { json.decodeFromString<List<MilestoneTarget>>(it) }.getOrNull() }
+            ?: raw?.let { runCatching { json.decodeFromString<MilestoneTarget>(it) }.getOrNull() }?.let { listOf(it) }
+            ?: emptyList()
     }
 
-    suspend fun setMilestoneTarget(target: MilestoneTarget) {
-        context.dataStore.edit { it[Keys.MILESTONE_TARGET] = json.encodeToString(target) }
+    suspend fun setMilestoneTargets(targets: List<MilestoneTarget>) {
+        context.dataStore.edit { it[Keys.MILESTONE_TARGET] = json.encodeToString(targets) }
+    }
+
+    // ---------- Alarms (multiple, set from the Study Timer widget's Alarm tab) ----------
+
+    val alarms: Flow<List<AlarmItem>> = context.dataStore.data.map { prefs ->
+        prefs[Keys.ALARMS]?.let { runCatching { json.decodeFromString<List<AlarmItem>>(it) }.getOrNull() } ?: emptyList()
+    }
+
+    suspend fun setAlarms(alarms: List<AlarmItem>) {
+        context.dataStore.edit { it[Keys.ALARMS] = json.encodeToString(alarms) }
     }
 
     // ---------- App Shortcuts widget ----------
@@ -435,6 +507,20 @@ class PreferencesManager(private val context: Context) {
 
             prefs[Keys.APP_CATEGORIES] = json.encodeToString(current)
             prefs[Keys.APP_CATEGORY_AUTOFILL_VERSION] = "2"
+
+            // Any category an app actually ends up in - built-in or not - is registered as its
+            // own selectable drawer group, the same as one typed in manually via Settings > "Add
+            // category". Without this, a category reachable only through auto-assignment (never
+            // through the manual add-category flow) would have apps living in it but no entry in
+            // the type list itself.
+            val savedTypes = prefs[Keys.APP_CATEGORY_TYPES]
+                ?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
+                ?: emptyList()
+            val knownTypes = defaultAppCategoryTypes.toSet() + savedTypes
+            val newTypes = current.values.filterNot { it in knownTypes }.distinct()
+            if (newTypes.isNotEmpty()) {
+                prefs[Keys.APP_CATEGORY_TYPES] = json.encodeToString((savedTypes + newTypes).distinct())
+            }
         }
     }
 
@@ -444,5 +530,12 @@ class PreferencesManager(private val context: Context) {
 
     suspend fun setLockOnDoubleTap(enabled: Boolean) {
         context.dataStore.edit { it[Keys.LOCK_ON_DOUBLE_TAP] = enabled }
+    }
+
+    val attentionProtectionMode: Flow<AttentionProtectionMode> =
+        context.dataStore.data.map { AttentionProtectionMode.fromStorageValue(it[Keys.ATTENTION_PROTECTION_MODE]) }
+
+    suspend fun setAttentionProtectionMode(mode: AttentionProtectionMode) {
+        context.dataStore.edit { it[Keys.ATTENTION_PROTECTION_MODE] = mode.storageValue }
     }
 }

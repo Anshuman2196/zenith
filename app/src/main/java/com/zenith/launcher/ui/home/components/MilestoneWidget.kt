@@ -1,14 +1,14 @@
 package com.zenith.launcher.ui.home.components
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -24,54 +24,83 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.MilestoneTarget
+import com.zenith.launcher.ui.home.LauncherCopy
 
 /**
- * Widget: "Milestone Target" - the aspirant's self-set goal for their next big mock test. Shows
- * the test name and target score. Tap the pencil to edit them.
+ * Widget: "Milestone Targets" - one or more self-set goals for upcoming mock tests, each with a
+ * target score and (optionally) the most recent actual score. Tap + to add another target, the
+ * pencil on a row to edit it, or the trash icon to remove it.
  */
 @Composable
-fun MilestoneWidget(target: MilestoneTarget, onChange: (MilestoneTarget) -> Unit) {
-    var showEditDialog by remember { mutableStateOf(false) }
-    WidgetCard {
-        MilestoneHeaderRow(target = target, onEditClick = { showEditDialog = true })
-        Spacer(Modifier.height(4.dp))
+fun MilestoneWidget(
+    targets: List<MilestoneTarget>,
+    onAdd: () -> Unit,
+    onChange: (MilestoneTarget) -> Unit,
+    onDelete: (String) -> Unit
+) {
+    var editingTarget by remember { mutableStateOf<MilestoneTarget?>(null) }
 
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            Text(
-                target.testName,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                "Target: ${target.targetScore}/${target.maxScore}",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
+    WidgetCard {
+        WidgetHeaderRow(title = "Targets", onAddClick = onAdd)
+
+        if (targets.isEmpty()) {
+            EmptyHint(LauncherCopy.emptyMilestones[java.time.LocalDate.now().dayOfYear % LauncherCopy.emptyMilestones.size])
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(targets, key = { it.id }) { target ->
+                    MilestoneRow(
+                        target = target,
+                        onEdit = { editingTarget = target },
+                        onDelete = { onDelete(target.id) }
+                    )
+                }
+            }
         }
     }
 
-    if (showEditDialog) {
+    editingTarget?.let { target ->
         EditMilestoneDialog(
             target = target,
-            onDismiss = { showEditDialog = false },
-            onConfirm = { onChange(it); showEditDialog = false }
+            onDismiss = { editingTarget = null },
+            onConfirm = { onChange(it); editingTarget = null }
         )
     }
 }
 
 @Composable
-private fun MilestoneHeaderRow(target: MilestoneTarget, onEditClick: () -> Unit) {
+private fun MilestoneRow(target: MilestoneTarget, onEdit: () -> Unit, onDelete: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("Milestone Target", style = MaterialTheme.typography.titleMedium)
-        IconButton(onClick = onEditClick, modifier = Modifier.size(28.dp)) {
-            Icon(Icons.Default.Edit, contentDescription = "Edit milestone target", modifier = Modifier.size(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(target.testName, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+            Text(
+                "Target: ${target.targetScore}/${target.maxScore}" + (target.lastScore?.let { " · Last: $it" } ?: ""),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Row {
+            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.Edit, contentDescription = "Edit ${target.testName}", modifier = Modifier.size(18.dp))
+            }
+            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    Icons.Default.DeleteOutline,
+                    contentDescription = "Remove ${target.testName}",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }
@@ -85,6 +114,7 @@ private fun EditMilestoneDialog(
     var testName by remember { mutableStateOf(target.testName) }
     var targetScore by remember { mutableStateOf(target.targetScore.toString()) }
     var maxScore by remember { mutableStateOf(target.maxScore.toString()) }
+    var lastScore by remember { mutableStateOf(target.lastScore?.toString() ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -106,6 +136,11 @@ private fun EditMilestoneDialog(
                     label = { Text("Max possible score") }, singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                OutlinedTextField(
+                    value = lastScore, onValueChange = { lastScore = it.filter(Char::isDigit) },
+                    label = { Text("Last score (optional)") }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
@@ -115,6 +150,7 @@ private fun EditMilestoneDialog(
                         testName = testName.ifBlank { "Comprehensive Mock Test" },
                         targetScore = targetScore.toIntOrNull() ?: target.targetScore,
                         maxScore = maxScore.toIntOrNull() ?: target.maxScore,
+                        lastScore = lastScore.toIntOrNull()
                     )
                 )
             }) { Text("Save") }

@@ -5,11 +5,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.TodoItem
+import com.zenith.launcher.ui.home.LauncherCopy
 
 /** Widget 3: Daily To-Do List - a quick checklist for the day's study goals. */
 @Composable
@@ -31,10 +33,10 @@ fun TodoWidget(
     onDelete: (String) -> Unit
 ) {
     WidgetCard {
-        WidgetHeaderRow(title = "Today's To-Do", onAddClick = onAddClick)
+        WidgetHeaderRow(title = "Todo", onAddClick = onAddClick)
 
         if (items.isEmpty()) {
-            EmptyHint("No tasks yet - tap + to add one")
+            EmptyHint(LauncherCopy.emptyTasks[java.time.LocalDate.now().dayOfYear % LauncherCopy.emptyTasks.size])
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -68,11 +70,12 @@ fun TodoWidget(
                                 modifier = Modifier.padding(end = 4.dp)
                             )
                         }
-                        IconButton(onClick = { onDelete(item.id) }) {
+                        IconButton(onClick = { onDelete(item.id) }, modifier = Modifier.size(36.dp)) {
                             Icon(
-                                Icons.Default.Delete,
+                                Icons.Default.DeleteOutline,
                                 contentDescription = "Delete task",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }

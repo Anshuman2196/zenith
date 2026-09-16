@@ -1,6 +1,8 @@
 package com.zenith.launcher.data.repository
 
 import com.zenith.launcher.data.local.PreferencesManager
+import com.zenith.launcher.data.model.AlarmItem
+import com.zenith.launcher.data.model.AttentionProtectionMode
 import com.zenith.launcher.data.model.AppCategory
 import com.zenith.launcher.data.model.AppShortcutRef
 import com.zenith.launcher.data.model.BackgroundSettings
@@ -63,6 +65,9 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     val focusAllowedApps: Flow<Set<String>> = prefs.focusAllowedApps
     suspend fun setFocusAllowedApps(packages: Set<String>) = prefs.setFocusAllowedApps(packages)
 
+    val distractionApps: Flow<Set<String>> = prefs.distractionApps
+    suspend fun setDistractionApps(packages: Set<String>) = prefs.setDistractionApps(packages)
+
     val backgroundSettings: Flow<BackgroundSettings> = prefs.backgroundSettings
     suspend fun setBackgroundImageUri(uriString: String?) = prefs.setBackgroundImageUri(uriString)
     suspend fun setBackgroundColor(argb: Long?) = prefs.setBackgroundColor(argb)
@@ -75,8 +80,11 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     suspend fun recordAppLaunch(ref: AppShortcutRef) = prefs.recordAppLaunch(ref)
     suspend fun removeFromRecentApps(ref: AppShortcutRef) = prefs.removeFromRecentApps(ref)
 
-    val milestoneTarget: Flow<MilestoneTarget> = prefs.milestoneTarget
-    suspend fun setMilestoneTarget(target: MilestoneTarget) = prefs.setMilestoneTarget(target)
+    val milestoneTargets: Flow<List<MilestoneTarget>> = prefs.milestoneTargets
+    suspend fun setMilestoneTargets(targets: List<MilestoneTarget>) = prefs.setMilestoneTargets(targets)
+
+    val alarms: Flow<List<AlarmItem>> = prefs.alarms
+    suspend fun setAlarms(alarms: List<AlarmItem>) = prefs.setAlarms(alarms)
 
     val appShortcuts: Flow<List<AppShortcutRef>> = prefs.appShortcuts
     suspend fun setAppShortcuts(shortcuts: List<AppShortcutRef>) = prefs.setAppShortcuts(shortcuts)
@@ -89,4 +97,7 @@ class SettingsRepository(private val prefs: PreferencesManager) {
 
     val lockOnDoubleTap: Flow<Boolean> = prefs.lockOnDoubleTap
     suspend fun setLockOnDoubleTap(enabled: Boolean) = prefs.setLockOnDoubleTap(enabled)
+
+    val attentionProtectionMode: Flow<AttentionProtectionMode> = prefs.attentionProtectionMode
+    suspend fun setAttentionProtectionMode(mode: AttentionProtectionMode) = prefs.setAttentionProtectionMode(mode)
 }

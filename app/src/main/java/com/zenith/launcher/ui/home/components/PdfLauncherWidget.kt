@@ -9,9 +9,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.PdfLink
+import com.zenith.launcher.ui.home.LauncherCopy
 
 /** Widget 5: Quick Access PDF Launcher - one-tap shortcuts to notes, papers, formula sheets. */
 @Composable
@@ -34,10 +36,10 @@ fun PdfLauncherWidget(
     val context = LocalContext.current
 
     WidgetCard {
-        WidgetHeaderRow(title = "Study PDFs", onAddClick = onAddClick)
+        WidgetHeaderRow(title = "Library", onAddClick = onAddClick)
 
         if (links.isEmpty()) {
-            EmptyHint("No PDFs linked yet - tap + to add one")
+            EmptyHint(LauncherCopy.emptyPdfs[java.time.LocalDate.now().dayOfYear % LauncherCopy.emptyPdfs.size])
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 links.forEach { link ->
@@ -53,8 +55,13 @@ fun PdfLauncherWidget(
                             Spacer(Modifier.width(8.dp))
                             Text(link.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
                         }
-                        IconButton(onClick = { onDelete(link.id) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Remove", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        IconButton(onClick = { onDelete(link.id) }, modifier = Modifier.size(36.dp)) {
+                            Icon(
+                                Icons.Default.DeleteOutline,
+                                contentDescription = "Remove",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
                 }
