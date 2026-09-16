@@ -58,6 +58,7 @@ data class HomeUiState(
     val appCategories: Map<String, String> = emptyMap(),
     val appCategoryTypes: List<String> = emptyList(),
     val lockOnDoubleTap: Boolean = false,
+    val distractionApps: Set<String> = emptySet(),
     val distractionPauseApp: AppInfo? = null,
     val distractionPauseSeconds: Int = 0,
     val distractionPauseMessage: String = "",
@@ -177,7 +178,7 @@ class HomeViewModel(
             todoItems = content.todos, chapterItems = content.chapters, pdfLinks = content.pdfs,
             isFocusModeActive = base.focusActive, background = base.background, isLoadingApps = content.loading,
             milestoneTargets = base.milestoneTargets, alarms = base.alarms, appShortcuts = resolvedShortcuts, recentApps = resolvedRecents,
-            appCategories = base.appCategories, appCategoryTypes = base.appCategoryTypes, lockOnDoubleTap = base.lockOnDoubleTap, attentionProtectionMode = base.attentionProtectionMode,
+            appCategories = base.appCategories, appCategoryTypes = base.appCategoryTypes, lockOnDoubleTap = base.lockOnDoubleTap, distractionApps = base.distractionApps, attentionProtectionMode = base.attentionProtectionMode,
             distractionPauseApp = stateWithPause.pauseApp, distractionPauseSeconds = stateWithPause.pauseSeconds, distractionPauseMessage = stateWithPause.pauseMessage
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
