@@ -5,5 +5,3 @@
 .DS_Store
 /build
 /app/build
-zenith-release.jks
-zenith-keystore-base64.txt
