@@ -9,26 +9,26 @@ package com.zenith.launcher.ui.home
  */
 object ZenithCopy {
     val greetings = listOf(
-        "A new day is already underway.",
-        "Today has not decided itself yet.",
-        "The next choice is still yours.",
-        "You are here now.",
-        "Begin where you are.",
-        "Nothing needs to be solved all at once.",
-        "Today is not asking for perfection.",
-        "There is still room to begin.",
-        "The day is moving. You can move with it.",
-        "Some things deserve your attention.",
-        "Not everything requires a response.",
-        "Your attention is valuable.",
-        "The next hour has not been spent yet.",
-        "Small choices become familiar paths.",
-        "This moment is enough to start.",
-        "Every day teaches something.",
-        "Where attention goes, habits follow.",
-        "You do not need to rush into the day.",
-        "The next step is usually smaller than it seems.",
-        "The day is still open."
+        "A new day is already underway, %s.",
+        "Today has not decided itself yet, %s.",
+        "The next choice is still yours, %s.",
+        "You are here now, %s.",
+        "Begin where you are, %s.",
+        "Nothing needs to be solved all at once, %s.",
+        "Today is not asking for perfection, %s.",
+        "There is still room to begin, %s.",
+        "The day is moving. You can move with it, %s.",
+        "Some things deserve your attention, %s.",
+        "Not everything requires a response, %s.",
+        "Your attention is valuable, %s.",
+        "The next hour has not been spent yet, %s.",
+        "Small choices become familiar paths, %s.",
+        "This moment is enough to start, %s.",
+        "Every day teaches something, %s.",
+        "Where attention goes, habits follow, %s.",
+        "You do not need to rush into the day, %s.",
+        "The next step is usually smaller than it seems, %s.",
+        "The day is still open, %s."
     )
 
     // Shown while Focus Mode is active on the toggle card.

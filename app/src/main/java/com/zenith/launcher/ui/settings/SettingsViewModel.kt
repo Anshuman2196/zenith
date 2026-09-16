@@ -48,6 +48,9 @@ class SettingsViewModel(
 
     // Exposed separately so MainActivity can theme the app without collecting the whole
     // (heavier) uiState combine chain just to read one boolean.
+    val onboardingCompleted: StateFlow<Boolean> =
+        settingsRepository.onboardingCompleted.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val isDarkMode: StateFlow<Boolean> =
         settingsRepository.isDarkMode.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
@@ -81,6 +84,9 @@ class SettingsViewModel(
         .combine(settingsRepository.appCategories) { state, categories -> state.copy(appCategories = categories) }
         .combine(settingsRepository.appCategoryTypes) { state, types -> state.copy(appCategoryTypes = types) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
+
+    // ---------- Onboarding ----------
+    fun completeOnboarding() = viewModelScope.launch { settingsRepository.setOnboardingCompleted(true) }
 
     // ---------- Profile ----------
     fun updateProfileName(name: String) = viewModelScope.launch { settingsRepository.setProfileName(name) }

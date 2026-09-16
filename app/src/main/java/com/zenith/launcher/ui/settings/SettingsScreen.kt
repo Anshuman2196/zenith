@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -45,6 +46,7 @@ import com.zenith.launcher.ui.settings.components.IconPackPickerSection
 import com.zenith.launcher.ui.settings.components.ProfileSettingsSection
 import com.zenith.launcher.ui.settings.components.ThemeToggleSection
 import com.zenith.launcher.ui.settings.components.WidgetVisibilitySection
+import com.zenith.launcher.ui.settings.components.UpdatesSettingsSection
 
 /** Top-level groupings settings are organized under - see [SettingsScreen]'s doc for why. */
 private enum class SettingsCategory(val title: String, val subtitle: String, val icon: ImageVector) {
@@ -52,7 +54,8 @@ private enum class SettingsCategory(val title: String, val subtitle: String, val
     APPEARANCE("Appearance", "Theme, font, icon pack, wallpaper", Icons.Default.Palette),
     WIDGETS("Widgets", "Choose what shows up on Home", Icons.Default.Widgets),
     GESTURES("Gestures & System", "Protect attention and control system surfaces", Icons.Default.SwipeRight),
-    APPS("Apps", "Focus Mode, Distractions, and App Drawer categories", Icons.Default.Apps)
+    APPS("Apps", "Focus Mode, Distractions, and App Drawer categories", Icons.Default.Apps),
+    UPDATES("Updates", "Check for a newer Zenith release", Icons.Default.SystemUpdate)
 }
 
 /**
@@ -164,6 +167,13 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         onAddCategory = viewModel::addAppCategoryType
                     )
                 }
+            }
+            SettingsCategory.UPDATES -> LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                item { UpdatesSettingsSection() }
             }
         }
     }

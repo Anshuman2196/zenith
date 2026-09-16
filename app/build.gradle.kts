@@ -15,8 +15,10 @@ android {
         // minSdk 26 lets us use java.time natively (no desugaring) and adaptive icons natively.
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // Release tags supply these values from GitHub Actions; local/debug builds keep the
+        // same compatible defaults. Android requires versionCode to increase for upgrades.
+        versionCode = providers.gradleProperty("versionCode").map(String::toInt).getOrElse(10000)
+        versionName = providers.gradleProperty("versionName").getOrElse("1.0.0")
     }
 
     buildTypes {

@@ -20,6 +20,9 @@ import kotlinx.coroutines.flow.Flow
  */
 class SettingsRepository(private val prefs: PreferencesManager) {
 
+    val onboardingCompleted: Flow<Boolean> = prefs.onboardingCompleted
+    suspend fun setOnboardingCompleted(completed: Boolean) = prefs.setOnboardingCompleted(completed)
+
     val profileName: Flow<String> = prefs.profileName
     suspend fun setProfileName(name: String) = prefs.setProfileName(name)
 

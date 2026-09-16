@@ -20,6 +20,9 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Allows Zenith to hand a downloaded release APK to Android's package installer. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- Syncing the chosen background photo to the actual Home/Lock screen wallpaper. -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
 
@@ -53,6 +56,16 @@
         </activity>
 
         <receiver android:name=".util.StudyTimerReceiver" android:exported="false" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- See ZenithDeviceAdminReceiver: exists only for the double-tap-to-lock gesture. -->
         <receiver

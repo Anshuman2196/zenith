@@ -78,6 +78,15 @@ class PreferencesManager(private val context: Context) {
         val APP_CATEGORY_AUTOFILL_VERSION = stringPreferencesKey("app_category_autofill_version")
         val LOCK_ON_DOUBLE_TAP = booleanPreferencesKey("lock_on_double_tap")
         val ATTENTION_PROTECTION_MODE = stringPreferencesKey("attention_protection_mode")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+    }
+
+    // ---------- Onboarding ----------
+
+    val onboardingCompleted: Flow<Boolean> = context.dataStore.data.map { it[Keys.ONBOARDING_COMPLETED] ?: false }
+
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.dataStore.edit { it[Keys.ONBOARDING_COMPLETED] = completed }
     }
 
     // ---------- Profile ----------
