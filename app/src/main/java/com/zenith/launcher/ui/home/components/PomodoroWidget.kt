@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -53,6 +55,38 @@ fun PomodoroWidget(
             onPomodoroProtectionChanged = onPomodoroProtectionChanged,
             onPomodoroPauseChanged = onPomodoroPauseChanged
         )
+    }
+}
+
+private fun formatSeconds(totalSeconds: Int): String {
+    val minutes = totalSeconds.coerceAtLeast(0) / 60
+    val seconds = totalSeconds.coerceAtLeast(0) % 60
+    return "%02d:%02d".format(minutes, seconds)
+}
+
+@Composable
+private fun DurationStepper(label: String, value: Int, onValueChange: (Int) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.labelMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TextButton(
+                enabled = value > 1,
+                onClick = { onValueChange((value - 1).coerceAtLeast(1)) }
+            ) { Text("−") }
+            Text(
+                text = "$value min",
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.width(64.dp)
+            )
+            TextButton(
+                enabled = value < 120,
+                onClick = { onValueChange((value + 1).coerceAtMost(120)) }
+            ) { Text("+") }
+        }
     }
 }
 

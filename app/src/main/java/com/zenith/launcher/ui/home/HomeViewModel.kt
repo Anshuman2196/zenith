@@ -415,6 +415,20 @@ class HomeViewModel(
     }
 
 
+    // ---------- App shortcuts ----------
+    fun addAppShortcut(app: AppInfo) = viewModelScope.launch {
+        val current = settingsRepository.appShortcuts.first()
+        if (current.any { it.packageName == app.packageName && it.activityClassName == app.activityClassName }) return@launch
+        settingsRepository.setAppShortcuts(current + AppShortcutRef(app.packageName, app.activityClassName))
+    }
+
+    fun removeAppShortcut(app: AppInfo) = viewModelScope.launch {
+        val current = settingsRepository.appShortcuts.first()
+        settingsRepository.setAppShortcuts(current.filterNot {
+            it.packageName == app.packageName && it.activityClassName == app.activityClassName
+        })
+    }
+
     // ---------- App Drawer + attention classification ----------
     fun setAppCategory(app: AppInfo, category: String) = viewModelScope.launch {
         settingsRepository.setAppCategory(app.packageName, category)
