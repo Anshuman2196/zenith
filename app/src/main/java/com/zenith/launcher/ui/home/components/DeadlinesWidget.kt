@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.weight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,7 +37,9 @@ fun DeadlinesWidget(deadlines: List<DeadlineCountdown>) {
                 // while still reading naturally left-to-right for the common 1-3 deadline case.
                 deadlines.chunked(2).forEach { rowOfDeadlines ->
                     Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                        rowOfDeadlines.forEach { deadline -> DeadlineColumn(deadline) }
+                        rowOfDeadlines.forEach { deadline ->
+                            DeadlineColumn(deadline, Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -47,8 +48,8 @@ fun DeadlinesWidget(deadlines: List<DeadlineCountdown>) {
 }
 
 @Composable
-private fun DeadlineColumn(deadline: DeadlineCountdown) {
-    Column(modifier = Modifier.weight(1f)) {
+private fun DeadlineColumn(deadline: DeadlineCountdown, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
         Text(
             text = deadline.daysLeft?.toString() ?: "--",
             style = MaterialTheme.typography.headlineMedium,

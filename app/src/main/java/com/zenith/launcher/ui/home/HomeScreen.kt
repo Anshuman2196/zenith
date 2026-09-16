@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -132,6 +133,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
     var isPomodoroProtectionActive by remember { mutableStateOf(false) }
     var pomodoroPauseSeconds by remember { mutableStateOf(0) }
     var pomodoroPauseMessage by remember { mutableStateOf("") }
+    var resizePreviewDelta by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
     // Protect only deliberate focus/reflection windows, not the whole Pomodoro. This keeps the
     // Android system surface available during ordinary study time while closing the escape hatch
@@ -150,13 +152,17 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
         }
     }
 
-    val visibleColumns = remember(state.widgetColumns, state.widgetVisibility) {
-        state.widgetColumns.map { column ->
+    val phoneLayout = LocalConfiguration.current.screenWidthDp < 600
+    // Phones use one comfortable reading column; tablets keep the existing three-column layout.
+    // The saved three-column arrangement is never rewritten merely because a phone is displaying it.
+    val visibleColumns = remember(state.widgetColumns, state.widgetVisibility, phoneLayout) {
+        val filtered = state.widgetColumns.map { column ->
             column.filter { id -> isWidgetEnabled(id, state.widgetVisibility) }
         }
+        if (phoneLayout) listOf(filtered.flatten()) else filtered
     }
     val dragState = rememberGridDragDropState(columns = visibleColumns) { id, toColumn, toIndex ->
-        viewModel.moveWidget(id, toColumn, toIndex)
+        if (!phoneLayout) viewModel.moveWidget(id, toColumn, toIndex)
     }
 
     // A launcher's onResume fires both on a cold "go to Home" and - if this was the last
@@ -246,7 +252,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(horizontal = if (phoneLayout) 8.dp else 12.dp, vertical = 8.dp)
                         // While rearranging, a tap on empty grid space (i.e. not consumed by any
                         // widget's own drag/click handling) finishes editing - the same as
                         // tapping empty space on the stock Android home screen.
@@ -259,7 +265,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                         ),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    for (columnIndex in 0 until GRID_COLUMN_COUNT) {
+                    for (columnIndex in 0 until if (phoneLayout) 1 else GRID_COLUMN_COUNT) {
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -274,6 +280,8 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                 key(id) {
                                     val isDragging = dragState.isDragging(id)
                                     val isLockedByPomodoro = isPomodoroRunning && id !in POMODORO_ACCESSIBLE_WIDGETS
+                                    val baseHeight = state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160
+                                    val displayedHeight = (baseHeight + (resizePreviewDelta[id] ?: 0)).coerceIn(88, 600)
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -289,7 +297,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                                 if (isPomodoroRunning) Modifier else Modifier.gridDragToReorder(dragState, id)
                                             )
                                             .then(if (isLockedByPomodoro) Modifier.blur(10.dp) else Modifier)
-                                            .height((state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160).coerceIn(88, 600).dp)
+                                            .height(displayedHeight.dp)
                                     ) {
                                         WidgetForId(
                                             id = id,
@@ -326,7 +334,13 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                         }
                                         if (dragState.editMode) {
                                             WidgetResizeGrip(
-                                                onHeightDelta = { viewModel.adjustWidgetHeight(id, it) },
+                                                onHeightPreview = { delta ->
+                                                    resizePreviewDelta = resizePreviewDelta + (id to delta)
+                                                },
+                                                onHeightChangeEnd = { totalDelta ->
+                                                    if (totalDelta != 0) viewModel.adjustWidgetHeight(id, totalDelta)
+                                                    resizePreviewDelta = resizePreviewDelta - id
+                                                },
                                                 modifier = Modifier.align(Alignment.BottomEnd)
                                             )
                                         }
@@ -467,9 +481,11 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
 /** Drag the diagonal corner grip to resize a widget; no preset-size buttons are needed. */
 @Composable
 private fun WidgetResizeGrip(
-    onHeightDelta: (Int) -> Unit,
+    onHeightPreview: (Int) -> Unit,
+    onHeightChangeEnd: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val density = LocalDensity.current
     Box(
         modifier = modifier
             .size(44.dp)
@@ -480,16 +496,20 @@ private fun WidgetResizeGrip(
                 detectDragGestures(
                     onDragStart = { accumulatedY = 0f },
                     onDragEnd = {
-                        // Convert the complete gesture into 24dp steps once. This avoids
-                        // launching many concurrent DataStore writes from raw pointer events.
-                        val steps = (accumulatedY / 24f).toInt()
-                        if (steps != 0) onHeightDelta(steps * 24)
+                        val totalDp = with(density) { (accumulatedY / density.density).toInt() }
+                        val committedDp = (totalDp / 24) * 24
+                        onHeightChangeEnd(committedDp)
                         accumulatedY = 0f
                     },
-                    onDragCancel = { accumulatedY = 0f },
+                    onDragCancel = {
+                        onHeightChangeEnd(0)
+                        accumulatedY = 0f
+                    },
                     onDrag = { change, dragAmount ->
                         change.consume()
                         accumulatedY += dragAmount.y
+                        val previewDp = with(density) { (accumulatedY / density.density).toInt() }
+                        onHeightPreview(previewDp)
                     }
                 )
             },
