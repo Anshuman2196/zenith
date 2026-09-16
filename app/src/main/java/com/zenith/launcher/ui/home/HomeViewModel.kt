@@ -2,26 +2,24 @@ package com.zenith.launcher.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zenith.launcher.data.model.AlarmItem
 import com.zenith.launcher.data.model.AttentionProtectionMode
 import com.zenith.launcher.data.model.AppCategory
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.data.model.AppShortcutRef
 import com.zenith.launcher.data.model.BackgroundSettings
-import com.zenith.launcher.data.model.ChapterItem
-import com.zenith.launcher.data.model.ChapterUrgency
-import com.zenith.launcher.data.model.ExamSettings
-import com.zenith.launcher.data.model.MilestoneTarget
-import com.zenith.launcher.data.model.PdfLink
+import com.zenith.launcher.data.model.BacklogItem
+import com.zenith.launcher.data.model.BacklogUrgency
+import com.zenith.launcher.data.model.DeadlineSettings
+import com.zenith.launcher.data.model.StudyTarget
+import com.zenith.launcher.data.model.LibraryLink
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetVisibility
 import com.zenith.launcher.data.model.WidgetSize
 import com.zenith.launcher.data.model.displayName
 import com.zenith.launcher.data.repository.AppRepository
 import com.zenith.launcher.data.repository.SettingsRepository
-import com.zenith.launcher.util.CountdownUtil
+import com.zenith.launcher.util.DeadlineCountdownUtil
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -42,19 +40,18 @@ data class HomeUiState(
     val widgetColumns: List<List<String>> = emptyList(),
     val widgetSizes: Map<String, WidgetSize> = emptyMap(),
     val widgetHeights: Map<String, Int> = emptyMap(),
-    val examCountdowns: List<ExamCountdown> = emptyList(),
+    val deadlineCountdowns: List<DeadlineCountdown> = emptyList(),
     val todoItems: List<TodoItem> = emptyList(),
-    val chapterItems: List<ChapterItem> = emptyList(),
-    val pdfLinks: List<PdfLink> = emptyList(),
+    val backlogItems: List<BacklogItem> = emptyList(),
+    val libraryLinks: List<LibraryLink> = emptyList(),
     val isFocusModeActive: Boolean = false,
+    val focusAllowedApps: Set<String> = emptySet(),
+    val distractionApps: Set<String> = emptySet(),
     val background: BackgroundSettings = BackgroundSettings(),
     val isLoadingApps: Boolean = true,
-    val milestoneTargets: List<MilestoneTarget> = emptyList(),
-    val alarms: List<AlarmItem> = emptyList(),
+    val studyTargets: List<StudyTarget> = emptyList(),
     /** Resolved live from [appShortcutRefs] against currently-installed apps every time either changes. */
     val appShortcuts: List<AppInfo> = emptyList(),
-    /** Same resolution rule as [appShortcuts], newest-launched first. */
-    val recentApps: List<AppInfo> = emptyList(),
     val appCategories: Map<String, String> = emptyMap(),
     val appCategoryTypes: List<String> = emptyList(),
     val lockOnDoubleTap: Boolean = false,
@@ -64,8 +61,8 @@ data class HomeUiState(
     val attentionProtectionMode: AttentionProtectionMode = AttentionProtectionMode.STRONG
 )
 
-/** One exam's live countdown, derived each recomposition from [com.zenith.launcher.data.model.ExamTarget]. */
-data class ExamCountdown(val id: String, val name: String, val daysLeft: Long?)
+/** One deadline's live countdown, derived from the user-managed deadline date. */
+data class DeadlineCountdown(val id: String, val name: String, val daysLeft: Long?)
 
 class HomeViewModel(
     private val appRepository: AppRepository,
@@ -98,40 +95,36 @@ class HomeViewModel(
 
     private data class BaseSettings(
         val name: String,
-        val exam: ExamSettings,
+        val deadlineSettings: DeadlineSettings,
         val visibility: WidgetVisibility,
         val columns: List<List<String>>,
         val sizes: Map<String, WidgetSize>,
         val heights: Map<String, Int>,
         val focusActive: Boolean,
-        val allowedApps: Set<String>,
+        val focusAllowedApps: Set<String>,
         val distractionApps: Set<String>,
         val background: BackgroundSettings,
-        val milestoneTargets: List<MilestoneTarget>,
-        val alarms: List<AlarmItem>,
+        val studyTargets: List<StudyTarget>,
         val appShortcutRefs: List<AppShortcutRef>,
-        val recentAppRefs: List<AppShortcutRef>,
         val appCategories: Map<String, String>,
         val appCategoryTypes: List<String>,
         val lockOnDoubleTap: Boolean,
         val attentionProtectionMode: AttentionProtectionMode
     )
 
-    private val baseState = settingsRepository.profileName.combine(settingsRepository.examSettings) { name, exam ->
-        BaseSettings(name, exam, WidgetVisibility(), emptyList(), emptyMap(), emptyMap(), false, emptySet(), emptySet(),
-            BackgroundSettings(), emptyList(), emptyList(), emptyList(), emptyList(), emptyMap(), emptyList(), false, AttentionProtectionMode.STRONG)
+    private val baseState = settingsRepository.profileName.combine(settingsRepository.deadlineSettings) { name, deadlineSettings ->
+        BaseSettings(name, deadlineSettings, WidgetVisibility(), emptyList(), emptyMap(), emptyMap(), false, emptySet(), emptySet(),
+            BackgroundSettings(), emptyList(), emptyList(), emptyMap(), emptyList(), false, AttentionProtectionMode.STRONG)
     }.combine(settingsRepository.widgetVisibility) { base, visibility -> base.copy(visibility = visibility) }
         .combine(settingsRepository.widgetColumns) { base, columns -> base.copy(columns = columns) }
         .combine(settingsRepository.widgetSizes) { base, sizes -> base.copy(sizes = sizes) }
         .combine(settingsRepository.widgetHeights) { base, heights -> base.copy(heights = heights) }
         .combine(settingsRepository.focusModeActive) { base, active -> base.copy(focusActive = active) }
-        .combine(settingsRepository.focusAllowedApps) { base, allowed -> base.copy(allowedApps = allowed) }
+        .combine(settingsRepository.focusAllowedApps) { base, allowed -> base.copy(focusAllowedApps = allowed) }
         .combine(settingsRepository.distractionApps) { base, distractions -> base.copy(distractionApps = distractions) }
         .combine(settingsRepository.backgroundSettings) { base, background -> base.copy(background = background) }
-        .combine(settingsRepository.milestoneTargets) { base, targets -> base.copy(milestoneTargets = targets) }
-        .combine(settingsRepository.alarms) { base, alarms -> base.copy(alarms = alarms) }
+        .combine(settingsRepository.studyTargets) { base, targets -> base.copy(studyTargets = targets) }
         .combine(settingsRepository.appShortcuts) { base, shortcuts -> base.copy(appShortcutRefs = shortcuts) }
-        .combine(settingsRepository.recentApps) { base, recents -> base.copy(recentAppRefs = recents) }
         .combine(settingsRepository.appCategories) { base, categories -> base.copy(appCategories = categories) }
         .combine(settingsRepository.appCategoryTypes) { base, types -> base.copy(appCategoryTypes = types) }
         .combine(settingsRepository.lockOnDoubleTap) { base, enabled -> base.copy(lockOnDoubleTap = enabled) }
@@ -142,8 +135,8 @@ class HomeViewModel(
         val apps: List<AppInfo> = emptyList(),
         val loading: Boolean = true,
         val todos: List<TodoItem> = emptyList(),
-        val chapters: List<ChapterItem> = emptyList(),
-        val pdfs: List<PdfLink> = emptyList()
+        val backlog: List<BacklogItem> = emptyList(),
+        val library: List<LibraryLink> = emptyList()
     )
 
     private data class QuadHomeContent(
@@ -156,8 +149,8 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = baseState.combine(_apps) { base, apps -> HomeContent(base, apps = apps) }
         .combine(_isLoadingApps) { content, loading -> content.copy(loading = loading) }
         .combine(settingsRepository.todoList) { content, todos -> content.copy(todos = todos) }
-        .combine(settingsRepository.chapterList) { content, chapters -> content.copy(chapters = chapters) }
-        .combine(settingsRepository.pdfList) { content, pdfs -> content.copy(pdfs = pdfs) }
+        .combine(settingsRepository.backlogList) { content, backlog -> content.copy(backlog = backlog) }
+        .combine(settingsRepository.libraryList) { content, library -> content.copy(library = library) }
         .combine(_distractionPauseApp) { content, pauseApp -> content to pauseApp }
         .combine(_distractionPauseSeconds) { pair, seconds -> Triple(pair.first, pair.second, seconds) }
         .combine(_distractionPauseMessage) { triple, message ->
@@ -168,15 +161,17 @@ class HomeViewModel(
 
         val base = content.base
         val apps = content.apps
-        val visibleApps = if (base.focusActive) apps.filter { it.packageName in base.allowedApps } else apps
+        val visibleApps = if (base.focusActive) apps.filter { it.packageName in base.focusAllowedApps } else apps
         val resolvedShortcuts = base.appShortcutRefs.mapNotNull { ref -> apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName } }
-        val resolvedRecents = base.recentAppRefs.mapNotNull { ref -> apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName } }
         HomeUiState(
             greeting = buildGreeting(base.name), apps = visibleApps, widgetVisibility = base.visibility, widgetColumns = base.columns, widgetSizes = base.sizes, widgetHeights = base.heights,
-            examCountdowns = base.exam.exams.map { exam -> ExamCountdown(exam.id, exam.name, exam.dateMillis?.let { CountdownUtil.daysRemaining(it) }) },
-            todoItems = content.todos, chapterItems = content.chapters, pdfLinks = content.pdfs,
-            isFocusModeActive = base.focusActive, background = base.background, isLoadingApps = content.loading,
-            milestoneTargets = base.milestoneTargets, alarms = base.alarms, appShortcuts = resolvedShortcuts, recentApps = resolvedRecents,
+            deadlineCountdowns = base.deadlineSettings.deadlines.map { deadline ->
+                DeadlineCountdown(deadline.id, deadline.name, deadline.dateMillis?.let { DeadlineCountdownUtil.daysRemaining(it) })
+            },
+            todoItems = content.todos, backlogItems = content.backlog, libraryLinks = content.library,
+            isFocusModeActive = base.focusActive, focusAllowedApps = base.focusAllowedApps, distractionApps = base.distractionApps,
+            background = base.background, isLoadingApps = content.loading,
+            studyTargets = base.studyTargets, appShortcuts = resolvedShortcuts,
             appCategories = base.appCategories, appCategoryTypes = base.appCategoryTypes, lockOnDoubleTap = base.lockOnDoubleTap, attentionProtectionMode = base.attentionProtectionMode,
             distractionPauseApp = stateWithPause.pauseApp, distractionPauseSeconds = stateWithPause.pauseSeconds, distractionPauseMessage = stateWithPause.pauseMessage
         )
@@ -185,7 +180,7 @@ class HomeViewModel(
     /** Rotates through a few phrases so the greeting doesn't feel static every day. */
     private fun buildGreeting(name: String): String {
         val dayOfYear = LocalDate.now().dayOfYear
-        return LauncherCopy.greetings[dayOfYear % LauncherCopy.greetings.size].format(name)
+        return ZenithCopy.greetings[dayOfYear % ZenithCopy.greetings.size].format(name)
     }
 
     fun launchApp(app: AppInfo) {
@@ -195,8 +190,8 @@ class HomeViewModel(
             return
         }
 
-        val message = LauncherCopy.distractionPause[
-            (app.packageName.hashCode().ushr(1) + LocalDate.now().dayOfYear) % LauncherCopy.distractionPause.size
+        val message = ZenithCopy.distractionPause[
+            (app.packageName.hashCode().ushr(1) + LocalDate.now().dayOfYear) % ZenithCopy.distractionPause.size
         ]
         _distractionPauseApp.value = app
         _distractionPauseSeconds.value = 5
@@ -223,7 +218,6 @@ class HomeViewModel(
     private fun performLaunch(app: AppInfo) {
         appRepository.launchApp(app.packageName, app.activityClassName)
         viewModelScope.launch {
-            settingsRepository.recordAppLaunch(AppShortcutRef(app.packageName, app.activityClassName))
         }
     }
 
@@ -383,76 +377,43 @@ class HomeViewModel(
         settingsRepository.setTodoList(uiState.value.todoItems.filterNot { it.id == id })
     }
 
-    // ---------- Chapter backlog ----------
-    fun addChapter(subject: String, chapterName: String, urgency: ChapterUrgency) = viewModelScope.launch {
-        if (chapterName.isBlank()) return@launch
-        val item = ChapterItem(id = UUID.randomUUID().toString(), subject = subject, chapterName = chapterName.trim(), urgency = urgency)
-        settingsRepository.setChapterList(uiState.value.chapterItems + item)
+    // ---------- Backlog ----------
+    fun addBacklogItem(subject: String, itemName: String, urgency: BacklogUrgency) = viewModelScope.launch {
+        if (itemName.isBlank()) return@launch
+        val item = BacklogItem(id = UUID.randomUUID().toString(), subject = subject, itemName = itemName.trim(), urgency = urgency)
+        settingsRepository.setBacklogList(uiState.value.backlogItems + item)
     }
 
-    fun deleteChapter(id: String) = viewModelScope.launch {
-        settingsRepository.setChapterList(uiState.value.chapterItems.filterNot { it.id == id })
+    fun deleteBacklogItem(id: String) = viewModelScope.launch {
+        settingsRepository.setBacklogList(uiState.value.backlogItems.filterNot { it.id == id })
     }
 
-    // ---------- PDF quick-launch ----------
-    fun addPdfLink(title: String, uriString: String) = viewModelScope.launch {
+    // ---------- Library ----------
+    fun addLibraryLink(title: String, uriString: String) = viewModelScope.launch {
         if (title.isBlank() || uriString.isBlank()) return@launch
-        val link = PdfLink(id = UUID.randomUUID().toString(), title = title.trim(), uriString = uriString)
-        settingsRepository.setPdfList(uiState.value.pdfLinks + link)
+        val link = LibraryLink(id = UUID.randomUUID().toString(), title = title.trim(), uriString = uriString)
+        settingsRepository.setLibraryList(uiState.value.libraryLinks + link)
     }
 
-    fun deletePdfLink(id: String) = viewModelScope.launch {
-        settingsRepository.setPdfList(uiState.value.pdfLinks.filterNot { it.id == id })
+    fun deleteLibraryLink(id: String) = viewModelScope.launch {
+        settingsRepository.setLibraryList(uiState.value.libraryLinks.filterNot { it.id == id })
     }
 
-    // ---------- Milestone targets (multiple) ----------
-    fun addMilestoneTarget() = viewModelScope.launch {
-        val target = MilestoneTarget(id = UUID.randomUUID().toString())
-        settingsRepository.setMilestoneTargets(uiState.value.milestoneTargets + target)
+    // ---------- Study targets ----------
+    fun addStudyTarget() = viewModelScope.launch {
+        val target = StudyTarget(id = UUID.randomUUID().toString())
+        settingsRepository.setStudyTargets(uiState.value.studyTargets + target)
     }
 
-    fun updateMilestoneTarget(target: MilestoneTarget) = viewModelScope.launch {
-        val updated = uiState.value.milestoneTargets.map { if (it.id == target.id) target else it }
-        settingsRepository.setMilestoneTargets(updated)
+    fun updateStudyTarget(target: StudyTarget) = viewModelScope.launch {
+        val updated = uiState.value.studyTargets.map { if (it.id == target.id) target else it }
+        settingsRepository.setStudyTargets(updated)
     }
 
-    fun deleteMilestoneTarget(id: String) = viewModelScope.launch {
-        settingsRepository.setMilestoneTargets(uiState.value.milestoneTargets.filterNot { it.id == id })
+    fun deleteStudyTarget(id: String) = viewModelScope.launch {
+        settingsRepository.setStudyTargets(uiState.value.studyTargets.filterNot { it.id == id })
     }
 
-    // ---------- Alarms (multiple) ----------
-    fun addAlarm(hour: Int, minute: Int, label: String) = viewModelScope.launch {
-        val alarm = AlarmItem(id = UUID.randomUUID().toString(), hour = hour, minute = minute, label = label.ifBlank { "Zenith alarm" })
-        settingsRepository.setAlarms(uiState.value.alarms + alarm)
-    }
-
-    fun toggleAlarm(id: String, enabled: Boolean) = viewModelScope.launch {
-        val updated = uiState.value.alarms.map { if (it.id == id) it.copy(isEnabled = enabled) else it }
-        settingsRepository.setAlarms(updated)
-    }
-
-    fun deleteAlarm(id: String) = viewModelScope.launch {
-        settingsRepository.setAlarms(uiState.value.alarms.filterNot { it.id == id })
-    }
-
-    // ---------- App Shortcuts widget ----------
-    fun addAppShortcut(app: AppInfo) = viewModelScope.launch {
-        val current = settingsRepository.appShortcuts.first()
-        val ref = AppShortcutRef(app.packageName, app.activityClassName)
-        if (current.any { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName }) return@launch
-        settingsRepository.setAppShortcuts(current + ref)
-    }
-
-    fun removeAppShortcut(app: AppInfo) = viewModelScope.launch {
-        val current = settingsRepository.appShortcuts.first()
-        settingsRepository.setAppShortcuts(
-            current.filterNot { it.packageName == app.packageName && it.activityClassName == app.activityClassName }
-        )
-    }
-
-    fun removeFromRecents(app: AppInfo) = viewModelScope.launch {
-        settingsRepository.removeFromRecentApps(AppShortcutRef(app.packageName, app.activityClassName))
-    }
 
     // ---------- App Drawer + attention classification ----------
     fun setAppCategory(app: AppInfo, category: String) = viewModelScope.launch {

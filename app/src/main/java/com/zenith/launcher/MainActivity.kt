@@ -12,10 +12,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zenith.launcher.ui.ViewModelFactory
-import com.zenith.launcher.ui.navigation.LauncherNavHost
+import com.zenith.launcher.ui.navigation.ZenithNavHost
 import com.zenith.launcher.ui.settings.SettingsViewModel
-import com.zenith.launcher.ui.theme.ZenithLauncherTheme
-import com.zenith.launcher.util.DefaultLauncherHelper
+import com.zenith.launcher.ui.theme.ZenithStudyHelperTheme
+import com.zenith.launcher.util.DefaultHomeHelper
 
 /**
  * Single-activity entry point. Because this app is registered as HOME (see manifest), the
@@ -24,8 +24,8 @@ import com.zenith.launcher.util.DefaultLauncherHelper
 class MainActivity : ComponentActivity() {
 
     // Must be registered unconditionally before STARTED, per the Activity Result API's rules -
-    // actually prompting only happens once, from onCreate, via DefaultLauncherHelper.
-    private val defaultLauncherRoleRequest =
+    // actually prompting only happens once, from onCreate, via DefaultHomeHelper.
+    private val defaultHomeRoleRequest =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { /* no-op either way */ }
 
     private val notificationPermissionRequest =
@@ -42,12 +42,12 @@ class MainActivity : ComponentActivity() {
 
         // Once per cold start rather than on every onResume, so this doesn't nag every single
         // time the user returns to Home if they dismiss the system prompt without acting on it.
-        DefaultLauncherHelper.requestIfNeeded(this, defaultLauncherRoleRequest)
+        DefaultHomeHelper.requestIfNeeded(this, defaultHomeRoleRequest)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
-        val container = (application as LauncherApplication).container
+        val container = (application as ZenithApplication).container
         val factory = ViewModelFactory(container)
 
         setContent {
@@ -56,8 +56,8 @@ class MainActivity : ComponentActivity() {
             val fontChoice by settingsViewModel.fontChoice.collectAsState()
             val customFontPath by settingsViewModel.customFontPath.collectAsState()
 
-            ZenithLauncherTheme(darkTheme = isDarkMode, fontChoice = fontChoice, customFontPath = customFontPath) {
-                LauncherNavHost(viewModelFactory = factory)
+            ZenithStudyHelperTheme(darkTheme = isDarkMode, fontChoice = fontChoice, customFontPath = customFontPath) {
+                ZenithNavHost(viewModelFactory = factory)
             }
         }
     }

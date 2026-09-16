@@ -23,13 +23,13 @@ fun WidgetVisibilitySection(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        ToggleRow("Deadlines", visibility.countdownEnabled) { checked -> onChange { it.copy(countdownEnabled = checked) } }
+        ToggleRow("Deadlines", visibility.deadlinesEnabled) { checked -> onChange { it.copy(deadlinesEnabled = checked) } }
         ToggleRow("Study Timer", visibility.pomodoroEnabled) { checked -> onChange { it.copy(pomodoroEnabled = checked) } }
         ToggleRow("Todo", visibility.todoEnabled) { checked -> onChange { it.copy(todoEnabled = checked) } }
-        ToggleRow("Backlog", visibility.chapterBacklogEnabled) { checked -> onChange { it.copy(chapterBacklogEnabled = checked) } }
-        ToggleRow("Library", visibility.pdfLauncherEnabled) { checked -> onChange { it.copy(pdfLauncherEnabled = checked) } }
+        ToggleRow("Backlog", visibility.backlogEnabled) { checked -> onChange { it.copy(backlogEnabled = checked) } }
+        ToggleRow("Library", visibility.libraryEnabled) { checked -> onChange { it.copy(libraryEnabled = checked) } }
         ToggleRow("Focus Mode", visibility.focusModeEnabled) { checked -> onChange { it.copy(focusModeEnabled = checked) } }
-        ToggleRow("Targets", visibility.milestoneEnabled) { checked -> onChange { it.copy(milestoneEnabled = checked) } }
+        ToggleRow("Targets", visibility.targetsEnabled) { checked -> onChange { it.copy(targetsEnabled = checked) } }
         ToggleRow("Shortcuts", visibility.appShortcutsEnabled) { checked -> onChange { it.copy(appShortcutsEnabled = checked) } }
         ToggleRow("Status", visibility.systemStatusEnabled) { checked -> onChange { it.copy(systemStatusEnabled = checked) } }
     }

@@ -2,11 +2,10 @@ package com.zenith.launcher.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.zenith.launcher.data.model.AppCategory
 import com.zenith.launcher.data.model.AttentionProtectionMode
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.data.model.BackgroundSettings
-import com.zenith.launcher.data.model.ExamSettings
+import com.zenith.launcher.data.model.DeadlineSettings
 import com.zenith.launcher.data.model.FontChoice
 import com.zenith.launcher.data.model.IconPackInfo
 import com.zenith.launcher.data.model.WidgetVisibility
@@ -22,7 +21,7 @@ import kotlinx.coroutines.launch
 /** Full settings snapshot backing every section of [SettingsScreen]. */
 data class SettingsUiState(
     val profileName: String = "",
-    val examSettings: ExamSettings = ExamSettings(),
+    val deadlineSettings: DeadlineSettings = DeadlineSettings(),
     val isDarkMode: Boolean = true,
     val fontChoice: FontChoice = FontChoice.DEFAULT,
     val availableIconPacks: List<IconPackInfo> = emptyList(),
@@ -65,8 +64,8 @@ class SettingsViewModel(
         viewModelScope.launch { _installedApps.value = appRepository.getInstalledApps() }
     }
 
-    val uiState: StateFlow<SettingsUiState> = settingsRepository.profileName.combine(settingsRepository.examSettings) { profileName, exams ->
-        SettingsUiState(profileName = profileName, examSettings = exams)
+    val uiState: StateFlow<SettingsUiState> = settingsRepository.profileName.combine(settingsRepository.deadlineSettings) { profileName, deadlines ->
+        SettingsUiState(profileName = profileName, deadlineSettings = deadlines)
     }.combine(isDarkMode) { state, darkMode -> state.copy(isDarkMode = darkMode) }
         .combine(fontChoice) { state, font -> state.copy(fontChoice = font) }
         .combine(_iconPacks) { state, packs -> state.copy(availableIconPacks = packs) }
@@ -86,8 +85,8 @@ class SettingsViewModel(
     // ---------- Profile ----------
     fun updateProfileName(name: String) = viewModelScope.launch { settingsRepository.setProfileName(name) }
 
-    // ---------- Exam dates ----------
-    fun setExamSettings(settings: ExamSettings) = viewModelScope.launch { settingsRepository.setExamSettings(settings) }
+    // ---------- Deadline dates ----------
+    fun setDeadlineSettings(settings: DeadlineSettings) = viewModelScope.launch { settingsRepository.setDeadlineSettings(settings) }
 
     // ---------- Theme ----------
     fun setDarkMode(enabled: Boolean) = viewModelScope.launch { settingsRepository.setDarkMode(enabled) }

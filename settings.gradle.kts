@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "ZenithLauncher"
+rootProject.name = "ZenithStudyHelper"
 include(":app")

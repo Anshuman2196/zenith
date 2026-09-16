@@ -1,7 +1,6 @@
 package com.zenith.launcher.ui.home.components
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -22,7 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.TodoItem
-import com.zenith.launcher.ui.home.LauncherCopy
+import com.zenith.launcher.ui.home.ZenithCopy
 
 /** Widget 3: Todo - a quick checklist for the day's study goals. */
 @Composable
@@ -36,7 +35,7 @@ fun TodoWidget(
         WidgetHeaderRow(title = "Todo", onAddClick = onAddClick)
 
         if (items.isEmpty()) {
-            EmptyHint(LauncherCopy.emptyTasks[java.time.LocalDate.now().dayOfYear % LauncherCopy.emptyTasks.size])
+            EmptyHint(ZenithCopy.emptyTasks[java.time.LocalDate.now().dayOfYear % ZenithCopy.emptyTasks.size])
         } else {
             LazyColumn(
                 modifier = Modifier

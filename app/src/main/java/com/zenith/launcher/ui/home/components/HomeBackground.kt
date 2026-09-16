@@ -26,7 +26,7 @@ import androidx.core.graphics.drawable.toBitmap
 
 /**
  * Paints the chosen photo (cropped to fill) or solid color behind everything else - shared by
- * Home, the App Drawer, and the Recent Apps deck so all three feel like one continuous surface
+ * Home and the App Drawer, so both feel like one continuous surface
  * rather than the drawer/deck popping up over a plain color.
  *
  * The photo is decoded once at roughly screen resolution via [BitmapUtils] (not full camera

@@ -17,21 +17,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.zenith.launcher.data.model.ChapterUrgency
+import com.zenith.launcher.data.model.BacklogUrgency
 
 /** Dialog for adding one item to the Backlog widget. */
 @Composable
-fun AddChapterDialog(
+fun AddBacklogDialog(
     onDismiss: () -> Unit,
-    onConfirm: (subject: String, chapter: String, urgency: ChapterUrgency) -> Unit
+    onConfirm: (subject: String, itemName: String, urgency: BacklogUrgency) -> Unit
 ) {
     var subject by remember { mutableStateOf("") }
-    var chapter by remember { mutableStateOf("") }
-    var urgency by remember { mutableStateOf(ChapterUrgency.MEDIUM) }
+    var itemName by remember { mutableStateOf("") }
+    var urgency by remember { mutableStateOf(BacklogUrgency.MEDIUM) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add chapter") },
+        title = { Text("Add backlog item") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -40,14 +40,14 @@ fun AddChapterDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
-                    value = chapter, onValueChange = { chapter = it },
-                    label = { Text("Chapter name") }, singleLine = true,
+                    value = itemName, onValueChange = { itemName = it },
+                    label = { Text("Topic or chapter") }, singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Text("Urgency", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ChapterUrgency.entries.forEach { option ->
+                    BacklogUrgency.entries.forEach { option ->
                         FilterChip(
                             selected = urgency == option,
                             onClick = { urgency = option },
@@ -59,8 +59,8 @@ fun AddChapterDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(subject.ifBlank { "General" }, chapter, urgency) },
-                enabled = chapter.isNotBlank()
+                onClick = { onConfirm(subject.ifBlank { "General" }, itemName, urgency) },
+                enabled = itemName.isNotBlank()
             ) { Text("Add") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }

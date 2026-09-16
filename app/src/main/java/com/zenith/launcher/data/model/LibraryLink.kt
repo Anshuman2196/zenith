@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
  * Uri as a string, since DataStore/JSON can't persist Uri objects directly.
  */
 @Serializable
-data class PdfLink(
+data class LibraryLink(
     val id: String,
     val title: String,
     val uriString: String

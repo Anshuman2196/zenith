@@ -10,25 +10,26 @@ package com.zenith.launcher.data.model
  * just be a duplicate.
  */
 object WidgetIds {
-    const val COUNTDOWN = "countdown"
+    // Kotlin names use the current product terminology; string values stay stable for saved layouts.
+    const val DEADLINES = "countdown"
     const val FOCUS_MODE = "focus_mode"
     const val POMODORO = "pomodoro"
     const val TODO = "todo"
-    const val CHAPTER_BACKLOG = "chapter_backlog"
-    const val PDF_LAUNCHER = "pdf_launcher"
-    const val MILESTONE = "milestone"
+    const val BACKLOG = "chapter_backlog"
+    const val LIBRARY = "pdf_launcher"
+    const val TARGETS = "milestone"
     const val APP_SHORTCUTS = "app_shortcuts"
     const val SYSTEM_STATUS = "system_status"
 
     /** Order a fresh install starts with; matches the layout in the reference design. */
     val DEFAULT_ORDER = listOf(
-        COUNTDOWN,
+        DEADLINES,
         FOCUS_MODE,
-        MILESTONE,
+        TARGETS,
         POMODORO,
         TODO,
-        CHAPTER_BACKLOG,
-        PDF_LAUNCHER,
+        BACKLOG,
+        LIBRARY,
         APP_SHORTCUTS,
         SYSTEM_STATUS
     )
@@ -40,25 +41,25 @@ object WidgetIds {
      */
     /** Initial heights (dp) tuned to the reference home-screen proportions. */
     val DEFAULT_HEIGHTS: Map<String, Int> = mapOf(
-        COUNTDOWN to 112,
+        DEADLINES to 112,
         FOCUS_MODE to 112,
-        MILESTONE to 190,
+        TARGETS to 190,
         POMODORO to 430,
         SYSTEM_STATUS to 150,
         TODO to 190,
-        CHAPTER_BACKLOG to 172,
-        PDF_LAUNCHER to 150,
+        BACKLOG to 172,
+        LIBRARY to 150,
         APP_SHORTCUTS to 132
     )
 
     val DEFAULT_COLUMNS: List<List<String>> = listOf(
         // Left column
-        listOf(COUNTDOWN, FOCUS_MODE, MILESTONE, SYSTEM_STATUS),
+        listOf(DEADLINES, FOCUS_MODE, TARGETS, SYSTEM_STATUS),
 
         // Middle column
         listOf(POMODORO, APP_SHORTCUTS),
 
         // Right column
-        listOf(TODO, CHAPTER_BACKLOG, PDF_LAUNCHER)
+        listOf(TODO, BACKLOG, LIBRARY)
     )
 }

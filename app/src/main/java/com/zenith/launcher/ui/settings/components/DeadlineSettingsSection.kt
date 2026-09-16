@@ -30,24 +30,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.zenith.launcher.data.model.ExamSettings
-import com.zenith.launcher.data.model.ExamTarget
+import com.zenith.launcher.data.model.DeadlineSettings
+import com.zenith.launcher.data.model.DeadlineTarget
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 /**
- * Deadline settings: a fully user-managed list of deadlines (no fixed JEE Main/Advanced pair anymore) -
+ * Deadline settings: a fully user-managed list of deadlines (no fixed set of deadlines) -
  * add as many as needed, rename them, set or change each target date, or remove one. Every
  * entry here shows up as a row in the Home screen's Deadlines widget.
  */
 @Composable
-fun ExamSettingsSection(examSettings: ExamSettings, onChange: (ExamSettings) -> Unit) {
+fun DeadlineSettingsSection(deadlineSettings: DeadlineSettings, onChange: (DeadlineSettings) -> Unit) {
     var showAddDialog by remember { mutableStateOf(false) }
 
     SettingsSectionCard(title = "Deadlines") {
-        if (examSettings.exams.isEmpty()) {
+        if (deadlineSettings.deadlines.isEmpty()) {
             Text(
                 "No deadlines yet - add one below.",
                 style = MaterialTheme.typography.labelSmall,
@@ -55,14 +55,14 @@ fun ExamSettingsSection(examSettings: ExamSettings, onChange: (ExamSettings) -> 
             )
         }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            examSettings.exams.forEach { exam ->
-                ExamRow(
-                    exam = exam,
+            deadlineSettings.deadlines.forEach { deadline ->
+                DeadlineRow(
+                    deadline = deadline,
                     onDateChange = { newDate ->
-                        onChange(examSettings.copy(exams = examSettings.exams.map { if (it.id == exam.id) it.copy(dateMillis = newDate) else it }))
+                        onChange(deadlineSettings.copy(deadlines = deadlineSettings.deadlines.map { if (it.id == deadline.id) it.copy(dateMillis = newDate) else it }))
                     },
                     onRemove = {
-                        onChange(examSettings.copy(exams = examSettings.exams.filterNot { it.id == exam.id }))
+                        onChange(deadlineSettings.copy(deadlines = deadlineSettings.deadlines.filterNot { it.id == deadline.id }))
                     }
                 )
             }
@@ -78,10 +78,10 @@ fun ExamSettingsSection(examSettings: ExamSettings, onChange: (ExamSettings) -> 
     }
 
     if (showAddDialog) {
-        AddExamDialog(
+        AddDeadlineDialog(
             onDismiss = { showAddDialog = false },
             onConfirm = { name ->
-                onChange(examSettings.copy(exams = examSettings.exams + ExamTarget(id = UUID.randomUUID().toString(), name = name)))
+                onChange(deadlineSettings.copy(deadlines = deadlineSettings.deadlines + DeadlineTarget(id = UUID.randomUUID().toString(), name = name)))
                 showAddDialog = false
             }
         )
@@ -90,10 +90,10 @@ fun ExamSettingsSection(examSettings: ExamSettings, onChange: (ExamSettings) -> 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ExamRow(exam: ExamTarget, onDateChange: (Long?) -> Unit, onRemove: () -> Unit) {
+private fun DeadlineRow(deadline: DeadlineTarget, onDateChange: (Long?) -> Unit, onRemove: () -> Unit) {
     var showPicker by remember { mutableStateOf(false) }
     val formatter = remember { DateTimeFormatter.ofPattern("dd MMM yyyy") }
-    val displayText = exam.dateMillis?.let {
+    val displayText = deadline.dateMillis?.let {
         Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().format(formatter)
     } ?: "Not set"
 
@@ -103,19 +103,19 @@ private fun ExamRow(exam: ExamTarget, onDateChange: (Long?) -> Unit, onRemove: (
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Text(exam.name, style = MaterialTheme.typography.bodyLarge)
+            Text(deadline.name, style = MaterialTheme.typography.bodyLarge)
             Text(displayText, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { showPicker = true }) { Text(if (exam.dateMillis == null) "Set date" else "Change") }
+            TextButton(onClick = { showPicker = true }) { Text(if (deadline.dateMillis == null) "Set date" else "Change") }
             IconButton(onClick = onRemove) {
-                Icon(Icons.Default.DeleteOutline, contentDescription = "Remove ${exam.name}")
+                Icon(Icons.Default.DeleteOutline, contentDescription = "Remove ${deadline.name}")
             }
         }
     }
 
     if (showPicker) {
-        val pickerState = rememberDatePickerState(initialSelectedDateMillis = exam.dateMillis)
+        val pickerState = rememberDatePickerState(initialSelectedDateMillis = deadline.dateMillis)
         DatePickerDialog(
             onDismissRequest = { showPicker = false },
             confirmButton = {
@@ -132,7 +132,7 @@ private fun ExamRow(exam: ExamTarget, onDateChange: (Long?) -> Unit, onRemove: (
 }
 
 @Composable
-private fun AddExamDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+private fun AddDeadlineDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,

@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
  * persistable read access to the one file the user picks.
  */
 @Composable
-fun AddPdfDialog(onDismiss: () -> Unit, onConfirm: (title: String, uriString: String) -> Unit) {
+fun AddLibraryDialog(onDismiss: () -> Unit, onConfirm: (title: String, uriString: String) -> Unit) {
     val context = LocalContext.current
     var title by remember { mutableStateOf("") }
     var pickedUri by remember { mutableStateOf<Uri?>(null) }
@@ -39,7 +39,7 @@ fun AddPdfDialog(onDismiss: () -> Unit, onConfirm: (title: String, uriString: St
             }
             pickedUri = uri
             if (title.isBlank()) {
-                title = uri.lastPathSegment?.substringAfterLast('/') ?: "PDF resource"
+                title = uri.lastPathSegment?.substringAfterLast('/') ?: "Library resource"
             }
         }
     }
@@ -50,7 +50,7 @@ fun AddPdfDialog(onDismiss: () -> Unit, onConfirm: (title: String, uriString: St
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(onClick = { pickerLauncher.launch(arrayOf("application/pdf")) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (pickedUri == null) "Choose PDF" else "PDF selected - change")
+                    Text(if (pickedUri == null) "Choose resource" else "Resource selected - change")
                 }
                 OutlinedTextField(
                     value = title,
@@ -63,7 +63,7 @@ fun AddPdfDialog(onDismiss: () -> Unit, onConfirm: (title: String, uriString: St
         },
         confirmButton = {
             TextButton(
-                onClick = { pickedUri?.let { onConfirm(title.ifBlank { "PDF resource" }, it.toString()) } },
+                onClick = { pickedUri?.let { onConfirm(title.ifBlank { "Library resource" }, it.toString()) } },
                 enabled = pickedUri != null
             ) { Text("Add") }
         },

@@ -1,6 +1,6 @@
 # Zenith
 
-Zenith is a calm Android **study helper and attention-management launcher** for students. It combines a focused Home surface, study timers, planning widgets, a categorized App Drawer, and lightweight behavioral friction around distracting app launches. It is designed to support studying, routines, and intentional phone use without being tied to one exam, curriculum, or age group.
+Zenith is a calm Android **study helper and attention-management home experience** for students. It combines a focused Home surface, study timers, planning widgets, a categorized App Drawer, and lightweight behavioral friction around distracting app launches. It is designed to support studying, routines, and intentional phone use without being tied to one exam, curriculum, or age group.
 
 Built with Jetpack Compose + Material 3, single-activity MVVM, and no third-party backend. Settings and personal planning data stay on-device in Android DataStore.
 
@@ -32,10 +32,10 @@ The widget order and heights are persisted, so users can hold and drag widgets t
 - **Deadlines** — countdowns for user-defined dates.
 - **Focus Mode** — an allow-list based focused app surface.
 - **Targets** — self-set progress targets.
-- **Study Timer** — Pomodoro, stopwatch, and alarms.
+- **Study Timer** — focused Pomodoro sessions with deliberate start/stop transitions.
 - **Todo** — a quick daily checklist.
-- **Backlog** — pending chapters, topics, or weak areas.
-- **Library** — quick links to study PDFs and other reference files.
+- **Backlog** — pending topics, chapters, or weak areas.
+- **Library** — quick links to study PDFs and reference resources.
 - **Shortcuts** — pinned one-tap app launches.
 - **Status** — Wi-Fi, battery, and connected Bluetooth glance.
 
@@ -53,11 +53,11 @@ Apps can be marked as **Distractions**. Zenith inserts a short, non-interactive 
 
 ### Pomodoro
 
-While a Pomodoro is running, the Home surface is protected: most widgets are visually softened and touch-blocked, Settings is disabled, the App Drawer edge gesture is disabled, and the timer cannot be switched to Stopwatch or Alarm. Todo, Backlog, and **Library remain outside the blur** so study notes and active planning remain accessible.
+While a Pomodoro is running, the Home surface is protected: most widgets are visually softened and touch-blocked, Settings is disabled, the App Drawer edge gesture is disabled, and the active timer stays focused. Todo, Backlog, and **Library remain outside the blur** so study notes and active planning remain accessible.
 
 Stopping a running Pomodoro uses the same full-screen, non-interactive reflection treatment as other deliberate pause moments, with a seven-second interval. Normal Pause remains immediate. A completed Pomodoro also retains its existing transition/reflection behavior.
 
-The visual lock uses a restrained blur rather than an extreme blur, keeping context recognizable while making the active timer the dominant surface.
+The visual lock uses a stronger blur on protected widgets, keeping context recognizable while making the active timer the dominant surface.
 
 ## App Drawer
 
@@ -90,10 +90,6 @@ The widget visibility labels use the same simplified names as Home: Deadlines, F
 
 Widgets are locked by default. Long-press a widget to enter rearranging mode, then drag it within or across columns. The edge gestures pause while editing so they do not compete with a drag. A Done pill, empty-space tap, or Back gesture finishes editing.
 
-## Recent Apps
-
-Zenith keeps its own lightweight list of apps launched through Zenith, most-recent-first. Android does not expose the system's actual task snapshots/thumbnails to an ordinary launcher app, so Zenith does not pretend to provide those.
-
 ## Attention protection modes
 
 - **Normal** — no system-UI changes.
@@ -119,13 +115,13 @@ app/src/main/java/com/zenith/launcher/
 └── util/                 Small platform/stateless helpers
 ```
 
-The Home and Settings screens consume immutable `StateFlow` snapshots. Persistence is centralized in `PreferencesManager`. UI copy is centralized in `LauncherCopy.kt` so behavioral language can evolve without scattering strings across widgets.
+The Home and Settings screens consume immutable `StateFlow` snapshots. Persistence is centralized in `PreferencesManager`. UI copy is centralized in `ZenithCopy.kt` so behavioral language can evolve without scattering strings across widgets.
 
 ## Permissions
 
 | Permission | Used for |
 |---|---|
-| `QUERY_ALL_PACKAGES` | Listing installed launcher apps, App Drawer content, and icon-pack matching. |
+| `QUERY_ALL_PACKAGES` | Listing installed apps, App Drawer content, and icon-pack matching. |
 | `ACCESS_NETWORK_STATE` | Status widget connectivity indicator. |
 | `SET_WALLPAPER` | Optional background/Lock Screen wallpaper synchronization. |
 | `BLUETOOTH` / `BLUETOOTH_CONNECT` | Connected Bluetooth device status on supported Android versions. |
@@ -135,11 +131,9 @@ The Home and Settings screens consume immutable `StateFlow` snapshots. Persisten
 
 ## Known Android limitations
 
-- A normal launcher cannot replace or permanently disable Android's system navigation or notification shade.
-- Zenith's Recent Apps deck cannot access system task snapshots without privileged/system access.
+- A normal Android app cannot replace or permanently disable Android's system navigation or notification shade.
 - Lock Screen wallpaper behavior can vary on heavily customized OEM builds.
 - Some Bluetooth battery-level APIs vary by device/OEM.
-- Alarms are not currently re-registered automatically after a device reboot.
 - Weather depends on a coarse location fix and connectivity.
 
 ## Privacy / network

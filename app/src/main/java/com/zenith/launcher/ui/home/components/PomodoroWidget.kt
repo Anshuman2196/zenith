@@ -9,40 +9,26 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.zenith.launcher.data.model.AlarmItem
-import com.zenith.launcher.ui.home.LauncherCopy
-import com.zenith.launcher.util.TimerAlarmScheduler
+import com.zenith.launcher.ui.home.ZenithCopy
+import com.zenith.launcher.util.StudyTimerScheduler
 import kotlinx.coroutines.delay
 
-private enum class TimerMode { POMODORO, STOPWATCH, ALARM }
 private enum class PomodoroPhase(val label: String) { STUDY("Focus"), SHORT_BREAK("Short break"), LONG_BREAK("Long break") }
 
 /**
@@ -50,78 +36,23 @@ private enum class PomodoroPhase(val label: String) { STUDY("Focus"), SHORT_BREA
  * rolling into the next one. A system alarm is scheduled while it runs, so completion is still
  * announced when Zenith is in the background.
  *
- * While a Pomodoro session is actually running, switching to the Stopwatch or Alarm tab is
- * disabled - this is one of the ways a running session locks the rest of Home down (see
- * [com.zenith.launcher.ui.home.HomeScreen]).
+ * While a Pomodoro session is actually running, the rest of Home is intentionally locked down
+ * (see [com.zenith.launcher.ui.home.HomeScreen]).
  */
 @Composable
 fun PomodoroWidget(
-    alarms: List<AlarmItem>,
-    onAddAlarm: (hour: Int, minute: Int, label: String) -> Unit,
-    onToggleAlarm: (id: String, enabled: Boolean) -> Unit,
-    onDeleteAlarm: (id: String) -> Unit,
     onPomodoroRunningChanged: (Boolean) -> Unit = {},
     onPomodoroProtectionChanged: (Boolean) -> Unit = {},
     onPomodoroPauseChanged: (Boolean, Int, String) -> Unit = { _, _, _ -> }
 ) {
-    var mode by rememberSaveable { mutableStateOf(TimerMode.POMODORO) }
-    var isPomodoroRunning by rememberSaveable { mutableStateOf(false) }
-
     WidgetCard {
         Text("Study timer", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
-        TabRow(selectedTabIndex = mode.ordinal) {
-            Tab(
-                selected = mode == TimerMode.POMODORO,
-                onClick = { mode = TimerMode.POMODORO },
-                text = { Text("Pomodoro") }
-            )
-            Tab(
-                selected = mode == TimerMode.STOPWATCH,
-                onClick = { if (!isPomodoroRunning) mode = TimerMode.STOPWATCH },
-                enabled = !isPomodoroRunning,
-                text = { Text("Stopwatch") }
-            )
-            Tab(
-                selected = mode == TimerMode.ALARM,
-                onClick = { if (!isPomodoroRunning) mode = TimerMode.ALARM },
-                enabled = !isPomodoroRunning,
-                text = { Text("Alarm") }
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-        when (mode) {
-            TimerMode.POMODORO -> PomodoroSection(
-                onPomodoroRunningChanged = {
-                    isPomodoroRunning = it
-                    onPomodoroRunningChanged(it)
-                },
-                onPomodoroProtectionChanged = onPomodoroProtectionChanged,
-                onPomodoroPauseChanged = onPomodoroPauseChanged
-            )
-            TimerMode.STOPWATCH -> StopwatchSection()
-            TimerMode.ALARM -> AlarmSection(
-                alarms = alarms,
-                onAdd = onAddAlarm,
-                onToggle = onToggleAlarm,
-                onDelete = onDeleteAlarm
-            )
-        }
-    }
-}
-
-@Composable
-private fun StopwatchSection() {
-    var elapsedSeconds by rememberSaveable { mutableIntStateOf(0) }
-    var isRunning by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(isRunning) { while (isRunning) { delay(1000); elapsedSeconds++ } }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        Text(formatSeconds(elapsedSeconds), style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            FilledTonalButton(onClick = { isRunning = !isRunning }) { Text(if (isRunning) "Pause" else "Start") }
-            OutlinedButton(onClick = { isRunning = false; elapsedSeconds = 0 }) { Text("Reset") }
-        }
+        PomodoroSection(
+            onPomodoroRunningChanged = onPomodoroRunningChanged,
+            onPomodoroProtectionChanged = onPomodoroProtectionChanged,
+            onPomodoroPauseChanged = onPomodoroPauseChanged
+        )
     }
 }
 
@@ -174,14 +105,14 @@ private fun PomodoroSection(
 
     LaunchedEffect(isRunning, phase, secondsLeft) {
         if (!isRunning || stopPauseSeconds > 0) return@LaunchedEffect
-        TimerAlarmScheduler.schedule(context, secondsLeft, "${phase.label} is complete")
+        StudyTimerScheduler.schedule(context, secondsLeft, "${phase.label} is complete")
         while (isRunning && secondsLeft > 0 && stopPauseSeconds == 0) { delay(1000); secondsLeft-- }
         if (isRunning && secondsLeft == 0 && stopPauseSeconds == 0) {
-            TimerAlarmScheduler.cancel(context)
+            StudyTimerScheduler.cancel(context)
             isRunning = false
             stopPauseSeconds = 7
             stopPauseKind = 2
-            stopPauseMessage = LauncherCopy.pomodoroComplete[completedFocusSessions % LauncherCopy.pomodoroComplete.size]
+            stopPauseMessage = ZenithCopy.pomodoroComplete[completedFocusSessions % ZenithCopy.pomodoroComplete.size]
         }
     }
 
@@ -218,7 +149,7 @@ private fun PomodoroSection(
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Text(phase.label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         Text(formatSeconds(secondsLeft), style = MaterialTheme.typography.headlineMedium)
-        if (awaitingNextPhase) Text(LauncherCopy.pomodoroTransition[completedFocusSessions % LauncherCopy.pomodoroTransition.size], style = MaterialTheme.typography.labelSmall)
+        if (awaitingNextPhase) Text(ZenithCopy.pomodoroTransition[completedFocusSessions % ZenithCopy.pomodoroTransition.size], style = MaterialTheme.typography.labelSmall)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             FilledTonalButton(
@@ -233,12 +164,12 @@ private fun PomodoroSection(
             OutlinedButton(
                 enabled = stopPauseSeconds == 0,
                 onClick = {
-                    TimerAlarmScheduler.cancel(context)
+                    StudyTimerScheduler.cancel(context)
                     if (isRunning) {
                         isRunning = false
                         stopPauseSeconds = 7
                         stopPauseKind = 1
-                        stopPauseMessage = LauncherCopy.pomodoroStop[completedFocusSessions % LauncherCopy.pomodoroStop.size]
+                        stopPauseMessage = ZenithCopy.pomodoroStop[completedFocusSessions % ZenithCopy.pomodoroStop.size]
                     } else {
                         awaitingNextPhase = false
                         phase = PomodoroPhase.STUDY
@@ -259,138 +190,3 @@ private fun PomodoroSection(
     }
 }
 
-/**
- * Multiple one-time-per-day alarms, each independently toggled and scheduled through
- * [TimerAlarmScheduler] - replaces what used to be a single ephemeral alarm slot. The
- * [LaunchedEffect] below keeps the system [android.app.AlarmManager] in sync with the persisted
- * list every time it changes, so toggling one off (or deleting it) actually cancels it rather
- * than just hiding it from the UI.
- */
-@Composable
-private fun AlarmSection(
-    alarms: List<AlarmItem>,
-    onAdd: (hour: Int, minute: Int, label: String) -> Unit,
-    onToggle: (id: String, enabled: Boolean) -> Unit,
-    onDelete: (id: String) -> Unit
-) {
-    val context = LocalContext.current
-    var showAddDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(alarms) {
-        alarms.forEach { alarm ->
-            if (alarm.isEnabled) {
-                TimerAlarmScheduler.scheduleAlarm(context, alarm.id, alarm.hour, alarm.minute, alarm.label)
-            } else {
-                TimerAlarmScheduler.cancelAlarm(context, alarm.id)
-            }
-        }
-    }
-
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        Text("Alarms", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(4.dp))
-        if (alarms.isEmpty()) {
-            Text(
-                "No alarms yet — tap \"Add alarm\" below.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                alarms.sortedWith(compareBy({ it.hour }, { it.minute })).forEach { alarm ->
-                    key(alarm.id) {
-                        AlarmRow(
-                            alarm = alarm,
-                            onToggle = { enabled -> onToggle(alarm.id, enabled) },
-                            onDelete = { onDelete(alarm.id) }
-                        )
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = { showAddDialog = true }) { Text("Add alarm") }
-    }
-
-    if (showAddDialog) {
-        AddAlarmDialog(
-            onDismiss = { showAddDialog = false },
-            onConfirm = { hour, minute, label ->
-                onAdd(hour, minute, label)
-                showAddDialog = false
-            }
-        )
-    }
-}
-
-@Composable
-private fun AlarmRow(alarm: AlarmItem, onToggle: (Boolean) -> Unit, onDelete: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Text("%02d:%02d".format(alarm.hour, alarm.minute), style = MaterialTheme.typography.titleMedium)
-            Text(alarm.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Switch(checked = alarm.isEnabled, onCheckedChange = onToggle)
-            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    Icons.Default.DeleteOutline,
-                    contentDescription = "Delete alarm at ${alarm.label}",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AddAlarmDialog(onDismiss: () -> Unit, onConfirm: (hour: Int, minute: Int, label: String) -> Unit) {
-    val now = java.util.Calendar.getInstance()
-    var hour by rememberSaveable { mutableIntStateOf(now.get(java.util.Calendar.HOUR_OF_DAY)) }
-    var minute by rememberSaveable { mutableIntStateOf(now.get(java.util.Calendar.MINUTE)) }
-    var label by rememberSaveable { mutableStateOf("Zenith alarm") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add alarm") },
-        text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("%02d:%02d".format(hour, minute), style = MaterialTheme.typography.headlineMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { hour = (hour + 23) % 24 }) { Text("−") }
-                    Text("Hour")
-                    IconButton(onClick = { hour = (hour + 1) % 24 }) { Text("+") }
-                    IconButton(onClick = { minute = (minute + 59) % 60 }) { Text("−") }
-                    Text("Min")
-                    IconButton(onClick = { minute = (minute + 1) % 60 }) { Text("+") }
-                }
-                OutlinedTextField(
-                    value = label,
-                    onValueChange = { label = it },
-                    label = { Text("Label") },
-                    singleLine = true
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(hour, minute, label.ifBlank { "Zenith alarm" }) }) { Text("Add") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    )
-}
-
-@Composable
-private fun DurationStepper(label: String, value: Int, onChange: (Int) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Text("$label (min)", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        IconButton(onClick = { if (value > 1) onChange(value - 1) }) { Text("−") }
-        Text(value.toString(), style = MaterialTheme.typography.bodyMedium)
-        IconButton(onClick = { onChange((value + 1).coerceAtMost(120)) }) { Text("+") }
-    }
-}
-private fun formatSeconds(totalSeconds: Int) = "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)

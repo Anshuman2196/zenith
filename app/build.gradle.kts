@@ -5,10 +5,12 @@ plugins {
 }
 
 android {
+    // Keep the existing package identity so upgrades retain the installed app/data.
     namespace = "com.zenith.launcher"
     compileSdk = 34
 
     defaultConfig {
+        // Keep the existing application id so this release upgrades the current Zenith install.
         applicationId = "com.zenith.launcher"
         // minSdk 26 lets us use java.time natively (no desugaring) and adaptive icons natively.
         minSdk = 26

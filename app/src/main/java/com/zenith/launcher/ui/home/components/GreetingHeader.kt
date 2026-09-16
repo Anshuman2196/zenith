@@ -38,6 +38,8 @@ import com.zenith.launcher.util.WeatherHelper
 import com.zenith.launcher.util.WeatherInfo
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * Top header, matching the reference design: the student's name is centered across the full
@@ -111,11 +113,35 @@ fun GreetingHeader(
             IconButton(onClick = onSettingsClick, enabled = settingsEnabled) {
                 Icon(
                     imageVector = Icons.Default.Settings,
-                    contentDescription = "Launcher settings",
+                    contentDescription = "Zenith settings",
                     tint = textColor
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun InlineClock(timeColor: Color, dateColor: Color) {
+    var now by remember { mutableStateOf(LocalDateTime.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = LocalDateTime.now()
+            delay(1000)
+        }
+    }
+
+    Column(horizontalAlignment = Alignment.End) {
+        Text(
+            text = now.format(DateTimeFormatter.ofPattern("h:mm a")),
+            style = MaterialTheme.typography.labelLarge,
+            color = timeColor
+        )
+        Text(
+            text = now.format(DateTimeFormatter.ofPattern("dd MMM")),
+            style = MaterialTheme.typography.labelSmall,
+            color = dateColor
+        )
     }
 }
 

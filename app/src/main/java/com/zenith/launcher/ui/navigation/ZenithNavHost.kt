@@ -11,24 +11,24 @@ import com.zenith.launcher.ui.home.HomeViewModel
 import com.zenith.launcher.ui.settings.SettingsScreen
 import com.zenith.launcher.ui.settings.SettingsViewModel
 
-object LauncherRoutes {
+object ZenithRoutes {
     const val HOME = "home"
     const val SETTINGS = "settings"
 }
 
 @Composable
-fun LauncherNavHost(viewModelFactory: ViewModelProvider.Factory) {
+fun ZenithNavHost(viewModelFactory: ViewModelProvider.Factory) {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = LauncherRoutes.HOME) {
-        composable(LauncherRoutes.HOME) {
+    NavHost(navController = navController, startDestination = ZenithRoutes.HOME) {
+        composable(ZenithRoutes.HOME) {
             val homeViewModel: HomeViewModel = viewModel(factory = viewModelFactory)
             HomeScreen(
                 viewModel = homeViewModel,
-                onOpenSettings = { navController.navigate(LauncherRoutes.SETTINGS) }
+                onOpenSettings = { navController.navigate(ZenithRoutes.SETTINGS) }
             )
         }
-        composable(LauncherRoutes.SETTINGS) {
+        composable(ZenithRoutes.SETTINGS) {
             val settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
             SettingsScreen(
                 viewModel = settingsViewModel,

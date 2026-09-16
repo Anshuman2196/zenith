@@ -30,7 +30,7 @@ private val LightColors = lightColorScheme(
  * in the app, including the Home screen greeting.
  */
 @Composable
-fun ZenithLauncherTheme(
+fun ZenithStudyHelperTheme(
     darkTheme: Boolean,
     fontChoice: FontChoice = FontChoice.DEFAULT,
     customFontPath: String? = null,

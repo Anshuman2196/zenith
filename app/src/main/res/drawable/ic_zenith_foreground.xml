@@ -1,5 +1,5 @@
 <!-- Bold white "Z" mark on a transparent layer, sitting on a solid black adaptive-icon
-     background (see ic_launcher_background). Kept within the adaptive-icon safe zone
+     background (see zenith_icon_background). Kept within the adaptive-icon safe zone
      (centered ~66dp of the 108dp viewport) so it isn't clipped on circular/rounded masks. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"

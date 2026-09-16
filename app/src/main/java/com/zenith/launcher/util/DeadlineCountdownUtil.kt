@@ -4,8 +4,8 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 
-/** Pure date-math helper for the exam countdown widget. */
-object CountdownUtil {
+/** Pure date-math helper for the Deadlines widget. */
+object DeadlineCountdownUtil {
 
     /**
      * Days remaining from today until [targetEpochMillis], clamped to 0 once the date passes.

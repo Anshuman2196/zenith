@@ -11,7 +11,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,7 +35,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -65,19 +62,19 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.zenith.launcher.data.model.WidgetIds
-import com.zenith.launcher.ui.home.components.AddChapterDialog
-import com.zenith.launcher.ui.home.components.AddPdfDialog
+import com.zenith.launcher.ui.home.components.AddBacklogDialog
+import com.zenith.launcher.ui.home.components.AddLibraryDialog
 import com.zenith.launcher.ui.home.components.AddTodoDialog
 import com.zenith.launcher.ui.home.components.AppDrawerOverlay
 import com.zenith.launcher.ui.home.components.AppShortcutsWidget
-import com.zenith.launcher.ui.home.components.ChapterBacklogWidget
-import com.zenith.launcher.ui.home.components.CountdownWidget
+import com.zenith.launcher.ui.home.components.BacklogWidget
+import com.zenith.launcher.ui.home.components.DeadlinesWidget
 import com.zenith.launcher.ui.home.components.FocusModeToggle
 import com.zenith.launcher.ui.home.components.GreetingHeader
 import com.zenith.launcher.ui.home.components.GridDragDropState
 import com.zenith.launcher.ui.home.components.HomeBackground
-import com.zenith.launcher.ui.home.components.MilestoneWidget
-import com.zenith.launcher.ui.home.components.PdfLauncherWidget
+import com.zenith.launcher.ui.home.components.TargetsWidget
+import com.zenith.launcher.ui.home.components.LibraryWidget
 import com.zenith.launcher.ui.home.components.PomodoroWidget
 import com.zenith.launcher.ui.home.components.SystemStatusWidget
 import com.zenith.launcher.ui.home.components.TodoWidget
@@ -112,8 +109,8 @@ private val EDGE_SWIPE_STRIP_WIDTH = 12.dp
 private val POMODORO_ACCESSIBLE_WIDGETS = setOf(
     WidgetIds.POMODORO,
     WidgetIds.TODO,
-    WidgetIds.CHAPTER_BACKLOG,
-    WidgetIds.PDF_LAUNCHER
+    WidgetIds.BACKLOG,
+    WidgetIds.LIBRARY
 )
 
 /**
@@ -126,10 +123,11 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
     var showAddTodoDialog by remember { mutableStateOf(false) }
-    var showAddChapterDialog by remember { mutableStateOf(false) }
-    var showAddPdfDialog by remember { mutableStateOf(false) }
+    var showAddBacklogDialog by remember { mutableStateOf(false) }
+    var showAddLibraryDialog by remember { mutableStateOf(false) }
     var isDrawerOpen by remember { mutableStateOf(false) }
     var isPomodoroRunning by remember { mutableStateOf(false) }
+    var showFocusEntryPause by remember { mutableStateOf(false) }
     var showFocusExitPause by remember { mutableStateOf(false) }
     var isPomodoroProtectionActive by remember { mutableStateOf(false) }
     var pomodoroPauseSeconds by remember { mutableStateOf(0) }
@@ -138,7 +136,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
     // Protect only deliberate focus/reflection windows, not the whole Pomodoro. This keeps the
     // Android system surface available during ordinary study time while closing the escape hatch
     // during moments when Zenith is asking the student to pause and choose deliberately.
-    val systemUiProtected = state.isFocusModeActive || showFocusExitPause ||
+    val systemUiProtected = state.isFocusModeActive || showFocusEntryPause || showFocusExitPause ||
         state.distractionPauseSeconds > 0 || isPomodoroProtectionActive
     val window = (context as? android.app.Activity)?.window
     LaunchedEffect(systemUiProtected, state.attentionProtectionMode, window) {
@@ -193,7 +191,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
     // that's active - both take priority over the launcher's normal "swallow back" behaviour.
     BackHandler(enabled = isDrawerOpen) { isDrawerOpen = false }
     BackHandler(enabled = !isDrawerOpen && dragState.editMode) { dragState.exitEditMode() }
-    BackHandler(enabled = showFocusExitPause) { /* The reflection completes automatically. */ }
+    BackHandler(enabled = showFocusEntryPause || showFocusExitPause) { /* The reflection completes automatically. */ }
 
     Box(modifier = Modifier.fillMaxSize()) {
         HomeBackground(background = state.background)
@@ -298,11 +296,14 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                             state = state,
                                             viewModel = viewModel,
                                             onShowAddTodo = { showAddTodoDialog = true },
-                                            onShowAddChapter = { showAddChapterDialog = true },
-                                            onShowAddPdf = { showAddPdfDialog = true },
+                                            onShowAddBacklog = { showAddBacklogDialog = true },
+                                            onShowAddLibrary = { showAddLibraryDialog = true },
                                             onFocusToggle = {
-                                                if (state.isFocusModeActive) showFocusExitPause = true
-                                                else viewModel.toggleFocusMode()
+                                                if (state.isFocusModeActive) {
+                                                    showFocusExitPause = true
+                                                } else if (!showFocusEntryPause) {
+                                                    showFocusEntryPause = true
+                                                }
                                             },
                                             onPomodoroRunningChanged = { isPomodoroRunning = it },
                                             onPomodoroProtectionChanged = { isPomodoroProtectionActive = it },
@@ -342,8 +343,8 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                         state = state,
                         viewModel = viewModel,
                         onShowAddTodo = {},
-                        onShowAddChapter = {},
-                        onShowAddPdf = {},
+                        onShowAddBacklog = {},
+                        onShowAddLibrary = {},
                         onFocusToggle = {},
                         onPomodoroRunningChanged = {}
                     )
@@ -411,6 +412,13 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
             )
         }
 
+        if (showFocusEntryPause) {
+            FocusModeEntryPause(onFinished = {
+                showFocusEntryPause = false
+                viewModel.toggleFocusMode()
+            })
+        }
+
         if (showFocusExitPause) {
             FocusModeExitPause(onFinished = {
                 showFocusExitPause = false
@@ -439,19 +447,19 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
             onConfirm = { text -> viewModel.addTodo(text); showAddTodoDialog = false }
         )
     }
-    if (showAddChapterDialog) {
-        AddChapterDialog(
-            onDismiss = { showAddChapterDialog = false },
-            onConfirm = { subject, chapter, urgency ->
-                viewModel.addChapter(subject, chapter, urgency)
-                showAddChapterDialog = false
+    if (showAddBacklogDialog) {
+        AddBacklogDialog(
+            onDismiss = { showAddBacklogDialog = false },
+            onConfirm = { subject, itemName, urgency ->
+                viewModel.addBacklogItem(subject, itemName, urgency)
+                showAddBacklogDialog = false
             }
         )
     }
-    if (showAddPdfDialog) {
-        AddPdfDialog(
-            onDismiss = { showAddPdfDialog = false },
-            onConfirm = { title, uri -> viewModel.addPdfLink(title, uri); showAddPdfDialog = false }
+    if (showAddLibraryDialog) {
+        AddLibraryDialog(
+            onDismiss = { showAddLibraryDialog = false },
+            onConfirm = { title, uri -> viewModel.addLibraryLink(title, uri); showAddLibraryDialog = false }
         )
     }
 }
@@ -560,6 +568,69 @@ private fun ReflectionPauseSurface(
             Text(
                 secondsLeft.coerceAtLeast(0).toString(),
                 style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+/**
+ * A deliberately non-interactive pause before entering Focus Mode. It is not a confirmation:
+ * after five seconds the mode starts automatically, giving the user a small moment to notice
+ * what they are choosing to give their attention to.
+ */
+@Composable
+private fun FocusModeEntryPause(onFinished: () -> Unit) {
+    var secondsLeft by remember { mutableStateOf(5) }
+    val messages = ZenithCopy.focusModeEntry
+    val breathing = rememberInfiniteTransition(label = "focusEntryBreath")
+    val ringScale by breathing.animateFloat(
+        initialValue = 0.92f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            tween(2600, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse
+        ),
+        label = "focusEntryBreathScale"
+    )
+    LaunchedEffect(Unit) {
+        while (secondsLeft > 0) {
+            delay(1000)
+            secondsLeft--
+        }
+        onFinished()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.78f))
+            // Consume taps so this stays a reflection rather than an accidental confirmation.
+            .pointerInput(Unit) { detectTapGestures { } },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(200.dp)
+                .graphicsLayer { scaleX = ringScale; scaleY = ringScale }
+                .clip(RoundedCornerShape(100.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+        )
+        Column(
+            modifier = Modifier.padding(horizontal = 34.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text("A moment before focus", style = MaterialTheme.typography.titleLarge, color = Color.White)
+            Text(
+                messages[(5 - secondsLeft).coerceIn(0, messages.lastIndex)],
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White.copy(alpha = 0.9f),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Text(
+                "Starting in $secondsLeft s",
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
         }
@@ -693,13 +764,13 @@ private fun EditModeDonePill(visible: Boolean, onDone: () -> Unit, modifier: Mod
 
 /** Whether widget [id] is currently toggled on in Settings > Widgets. */
 private fun isWidgetEnabled(id: String, visibility: com.zenith.launcher.data.model.WidgetVisibility): Boolean = when (id) {
-    WidgetIds.COUNTDOWN -> visibility.countdownEnabled
+    WidgetIds.DEADLINES -> visibility.deadlinesEnabled
     WidgetIds.FOCUS_MODE -> visibility.focusModeEnabled
     WidgetIds.POMODORO -> visibility.pomodoroEnabled
     WidgetIds.TODO -> visibility.todoEnabled
-    WidgetIds.CHAPTER_BACKLOG -> visibility.chapterBacklogEnabled
-    WidgetIds.PDF_LAUNCHER -> visibility.pdfLauncherEnabled
-    WidgetIds.MILESTONE -> visibility.milestoneEnabled
+    WidgetIds.BACKLOG -> visibility.backlogEnabled
+    WidgetIds.LIBRARY -> visibility.libraryEnabled
+    WidgetIds.TARGETS -> visibility.targetsEnabled
     WidgetIds.APP_SHORTCUTS -> visibility.appShortcutsEnabled
     WidgetIds.SYSTEM_STATUS -> visibility.systemStatusEnabled
     else -> false
@@ -711,21 +782,17 @@ private fun WidgetForId(
     state: HomeUiState,
     viewModel: HomeViewModel,
     onShowAddTodo: () -> Unit,
-    onShowAddChapter: () -> Unit,
-    onShowAddPdf: () -> Unit,
+    onShowAddBacklog: () -> Unit,
+    onShowAddLibrary: () -> Unit,
     onFocusToggle: () -> Unit = {},
     onPomodoroRunningChanged: (Boolean) -> Unit = {},
     onPomodoroProtectionChanged: (Boolean) -> Unit = {},
     onPomodoroPauseChanged: (Boolean, Int, String) -> Unit = { _, _, _ -> }
 ) {
     when (id) {
-        WidgetIds.COUNTDOWN -> CountdownWidget(state.examCountdowns)
+        WidgetIds.DEADLINES -> DeadlinesWidget(state.deadlineCountdowns)
         WidgetIds.FOCUS_MODE -> FocusModeToggle(state.isFocusModeActive, onFocusToggle)
         WidgetIds.POMODORO -> PomodoroWidget(
-            alarms = state.alarms,
-            onAddAlarm = viewModel::addAlarm,
-            onToggleAlarm = viewModel::toggleAlarm,
-            onDeleteAlarm = viewModel::deleteAlarm,
             onPomodoroRunningChanged = onPomodoroRunningChanged,
             onPomodoroProtectionChanged = onPomodoroProtectionChanged,
             onPomodoroPauseChanged = onPomodoroPauseChanged
@@ -736,21 +803,21 @@ private fun WidgetForId(
             onToggle = viewModel::toggleTodo,
             onDelete = viewModel::deleteTodo
         )
-        WidgetIds.CHAPTER_BACKLOG -> ChapterBacklogWidget(
-            items = state.chapterItems,
-            onAddClick = onShowAddChapter,
-            onDelete = viewModel::deleteChapter
+        WidgetIds.BACKLOG -> BacklogWidget(
+            items = state.backlogItems,
+            onAddClick = onShowAddBacklog,
+            onDelete = viewModel::deleteBacklogItem
         )
-        WidgetIds.PDF_LAUNCHER -> PdfLauncherWidget(
-            links = state.pdfLinks,
-            onAddClick = onShowAddPdf,
-            onDelete = viewModel::deletePdfLink
+        WidgetIds.LIBRARY -> LibraryWidget(
+            links = state.libraryLinks,
+            onAddClick = onShowAddLibrary,
+            onDelete = viewModel::deleteLibraryLink
         )
-        WidgetIds.MILESTONE -> MilestoneWidget(
-            targets = state.milestoneTargets,
-            onAdd = viewModel::addMilestoneTarget,
-            onChange = viewModel::updateMilestoneTarget,
-            onDelete = viewModel::deleteMilestoneTarget
+        WidgetIds.TARGETS -> TargetsWidget(
+            targets = state.studyTargets,
+            onAdd = viewModel::addStudyTarget,
+            onChange = viewModel::updateStudyTarget,
+            onDelete = viewModel::deleteStudyTarget
         )
         WidgetIds.APP_SHORTCUTS -> AppShortcutsWidget(
             pinnedApps = state.appShortcuts,

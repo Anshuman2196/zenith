@@ -23,20 +23,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.zenith.launcher.data.model.ChapterItem
-import com.zenith.launcher.data.model.ChapterUrgency
+import com.zenith.launcher.data.model.BacklogItem
+import com.zenith.launcher.data.model.BacklogUrgency
 import com.zenith.launcher.ui.theme.AccentDanger
 import com.zenith.launcher.ui.theme.AccentWarning
-import com.zenith.launcher.ui.home.LauncherCopy
+import com.zenith.launcher.ui.home.ZenithCopy
 
 /**
- * Widget 4: Backlog List - pending chapters, revision topics, and weak areas, each tagged
- * with an urgency (Low/Medium/High). Higher-urgency chapters sort to the top of the list, so the
+ * Widget 4: Backlog List - pending topics, revision topics, and weak areas, each tagged
+ * with an urgency (Low/Medium/High). Higher-urgency items sort to the top of the list, so the
  * thing that most needs attention is always what's visible first without scrolling.
  */
 @Composable
-fun ChapterBacklogWidget(
-    items: List<ChapterItem>,
+fun BacklogWidget(
+    items: List<BacklogItem>,
     onAddClick: () -> Unit,
     onDelete: (String) -> Unit
 ) {
@@ -44,7 +44,7 @@ fun ChapterBacklogWidget(
         WidgetHeaderRow(title = "Backlog", onAddClick = onAddClick)
 
         if (items.isEmpty()) {
-            EmptyHint(LauncherCopy.emptyChapters[java.time.LocalDate.now().dayOfYear % LauncherCopy.emptyChapters.size])
+            EmptyHint(ZenithCopy.emptyBacklog[java.time.LocalDate.now().dayOfYear % ZenithCopy.emptyBacklog.size])
         } else {
             val sorted = items.sortedByDescending { it.urgency.ordinal }
             LazyColumn(
@@ -67,7 +67,7 @@ fun ChapterBacklogWidget(
                             Spacer(Modifier.width(8.dp))
                             Column {
                                 Text(
-                                    "${item.subject} - ${item.chapterName}",
+                                    "${item.subject} - ${item.itemName}",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
@@ -78,11 +78,11 @@ fun ChapterBacklogWidget(
                             }
                         }
                         // Deliberately understated - a full-strength destructive icon here would
-                        // outweigh the actual chapter text it sits next to in a dense list.
+                        // outweigh the actual topic text it sits next to in a dense list.
                         IconButton(onClick = { onDelete(item.id) }, modifier = Modifier.size(36.dp)) {
                             Icon(
                                 Icons.Default.DeleteOutline,
-                                contentDescription = "Remove ${item.chapterName}",
+                                contentDescription = "Remove ${item.itemName}",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 modifier = Modifier.size(18.dp)
                             )
@@ -95,11 +95,11 @@ fun ChapterBacklogWidget(
 }
 
 @Composable
-private fun UrgencyDot(urgency: ChapterUrgency) {
+private fun UrgencyDot(urgency: BacklogUrgency) {
     val color = when (urgency) {
-        ChapterUrgency.LOW -> MaterialTheme.colorScheme.onSurfaceVariant
-        ChapterUrgency.MEDIUM -> AccentWarning
-        ChapterUrgency.HIGH -> AccentDanger
+        BacklogUrgency.LOW -> MaterialTheme.colorScheme.onSurfaceVariant
+        BacklogUrgency.MEDIUM -> AccentWarning
+        BacklogUrgency.HIGH -> AccentDanger
     }
     Box(
         modifier = Modifier
@@ -109,8 +109,8 @@ private fun UrgencyDot(urgency: ChapterUrgency) {
     )
 }
 
-private fun ChapterUrgency.label(): String = when (this) {
-    ChapterUrgency.LOW -> "Low urgency"
-    ChapterUrgency.MEDIUM -> "Medium urgency"
-    ChapterUrgency.HIGH -> "High urgency"
+private fun BacklogUrgency.label(): String = when (this) {
+    BacklogUrgency.LOW -> "Low urgency"
+    BacklogUrgency.MEDIUM -> "Medium urgency"
+    BacklogUrgency.HIGH -> "High urgency"
 }

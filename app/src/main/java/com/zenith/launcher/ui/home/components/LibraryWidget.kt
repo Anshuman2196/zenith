@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,13 +23,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.zenith.launcher.data.model.PdfLink
-import com.zenith.launcher.ui.home.LauncherCopy
+import com.zenith.launcher.data.model.LibraryLink
+import com.zenith.launcher.ui.home.ZenithCopy
 
 /** Widget 5: Library - one-tap shortcuts to notes, papers, formula sheets. */
 @Composable
-fun PdfLauncherWidget(
-    links: List<PdfLink>,
+fun LibraryWidget(
+    links: List<LibraryLink>,
     onAddClick: () -> Unit,
     onDelete: (String) -> Unit
 ) {
@@ -39,19 +39,19 @@ fun PdfLauncherWidget(
         WidgetHeaderRow(title = "Library", onAddClick = onAddClick)
 
         if (links.isEmpty()) {
-            EmptyHint(LauncherCopy.emptyPdfs[java.time.LocalDate.now().dayOfYear % LauncherCopy.emptyPdfs.size])
+            EmptyHint(ZenithCopy.emptyLibrary[java.time.LocalDate.now().dayOfYear % ZenithCopy.emptyLibrary.size])
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 links.forEach { link ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { openPdf(context, link.uriString) },
+                            .clickable { openLibraryItem(context, link.uriString) },
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(8.dp))
                             Text(link.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
                         }
@@ -70,8 +70,8 @@ fun PdfLauncherWidget(
     }
 }
 
-/** Opens a linked PDF with whatever PDF viewer the user has installed. */
-private fun openPdf(context: Context, uriString: String) {
+/** Opens a linked Library resource with the installed document/PDF viewer. */
+private fun openLibraryItem(context: Context, uriString: String) {
     val uri = Uri.parse(uriString)
     val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, "application/pdf")

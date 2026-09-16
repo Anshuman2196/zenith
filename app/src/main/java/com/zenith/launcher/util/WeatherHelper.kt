@@ -38,7 +38,7 @@ data class WeatherInfo(val temperatureCelsius: Double, val weatherCode: Int)
  *
  * There's no bundled location library here (no Play Services / Fused Location dependency) -
  * just the framework [LocationManager], matching the rest of the app's preference for framework
- * APIs over extra dependencies (see [SystemActionsHelper], [DefaultLauncherHelper]).
+ * APIs over extra dependencies (see [SystemActionsHelper], [DefaultHomeHelper]).
  */
 object WeatherHelper {
 

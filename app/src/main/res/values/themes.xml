@@ -1,7 +1,7 @@
 <resources>
     <!-- Minimal platform window theme - Compose draws everything else. -->
-    <style name="Theme.ZenithLauncher" parent="android:Theme.DeviceDefault.NoActionBar">
-        <item name="android:windowBackground">@color/launcher_background</item>
+    <style name="Theme.ZenithStudyHelper" parent="android:Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">@color/zenith_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>

@@ -8,7 +8,7 @@ import android.net.Uri
 /**
  * A user's background photo is very often a full camera-resolution image (12MP+ - tens of
  * megabytes once decoded as ARGB_8888). Decoding it at full size every place it's shown (Home,
- * the Settings preview thumbnail, the Recent Apps deck) is the single biggest avoidable memory
+ * the Settings preview thumbnail) is the single biggest avoidable memory
  * cost in this app, especially on low-RAM devices - this is the fix: decode straight to roughly
  * the target size using [BitmapFactory.Options.inSampleSize], and use the half-memory RGB_565
  * config since a background photo doesn't need an alpha channel or 8-bit-per-channel precision.

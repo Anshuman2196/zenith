@@ -4,9 +4,9 @@ import android.content.pm.ApplicationInfo
 import android.graphics.drawable.Drawable
 
 /**
- * Represents one installed app shown in the launcher's app grid.
+ * Represents one installed app shown in Zenith's app grid.
  *
- * @param icon Either the app's own launcher icon, or a themed replacement from the
+ * @param icon Either the app's own icon, or a themed replacement from the
  *             user-selected icon pack (see [com.zenith.launcher.util.IconPackHelper]).
  */
 data class AppInfo(

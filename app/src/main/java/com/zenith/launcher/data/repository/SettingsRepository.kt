@@ -1,16 +1,14 @@
 package com.zenith.launcher.data.repository
 
 import com.zenith.launcher.data.local.PreferencesManager
-import com.zenith.launcher.data.model.AlarmItem
 import com.zenith.launcher.data.model.AttentionProtectionMode
-import com.zenith.launcher.data.model.AppCategory
 import com.zenith.launcher.data.model.AppShortcutRef
 import com.zenith.launcher.data.model.BackgroundSettings
-import com.zenith.launcher.data.model.ChapterItem
-import com.zenith.launcher.data.model.ExamSettings
+import com.zenith.launcher.data.model.BacklogItem
+import com.zenith.launcher.data.model.DeadlineSettings
 import com.zenith.launcher.data.model.FontChoice
-import com.zenith.launcher.data.model.MilestoneTarget
-import com.zenith.launcher.data.model.PdfLink
+import com.zenith.launcher.data.model.StudyTarget
+import com.zenith.launcher.data.model.LibraryLink
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetVisibility
 import com.zenith.launcher.data.model.WidgetSize
@@ -25,8 +23,8 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     val profileName: Flow<String> = prefs.profileName
     suspend fun setProfileName(name: String) = prefs.setProfileName(name)
 
-    val examSettings: Flow<ExamSettings> = prefs.examSettings
-    suspend fun setExamSettings(settings: ExamSettings) = prefs.setExamSettings(settings)
+    val deadlineSettings: Flow<DeadlineSettings> = prefs.deadlineSettings
+    suspend fun setDeadlineSettings(settings: DeadlineSettings) = prefs.setDeadlineSettings(settings)
 
     val isDarkMode: Flow<Boolean> = prefs.isDarkMode
     suspend fun setDarkMode(enabled: Boolean) = prefs.setDarkMode(enabled)
@@ -53,11 +51,11 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     val todoList: Flow<List<TodoItem>> = prefs.todoList
     suspend fun setTodoList(items: List<TodoItem>) = prefs.setTodoList(items)
 
-    val chapterList: Flow<List<ChapterItem>> = prefs.chapterList
-    suspend fun setChapterList(items: List<ChapterItem>) = prefs.setChapterList(items)
+    val backlogList: Flow<List<BacklogItem>> = prefs.backlogList
+    suspend fun setBacklogList(items: List<BacklogItem>) = prefs.setBacklogList(items)
 
-    val pdfList: Flow<List<PdfLink>> = prefs.pdfList
-    suspend fun setPdfList(items: List<PdfLink>) = prefs.setPdfList(items)
+    val libraryList: Flow<List<LibraryLink>> = prefs.libraryList
+    suspend fun setLibraryList(items: List<LibraryLink>) = prefs.setLibraryList(items)
 
     val focusModeActive: Flow<Boolean> = prefs.focusModeActive
     suspend fun setFocusModeActive(active: Boolean) = prefs.setFocusModeActive(active)
@@ -76,15 +74,9 @@ class SettingsRepository(private val prefs: PreferencesManager) {
     val syncLockScreenWallpaper: Flow<Boolean> = prefs.syncLockScreenWallpaper
     suspend fun setSyncLockScreenWallpaper(enabled: Boolean) = prefs.setSyncLockScreenWallpaper(enabled)
 
-    val recentApps: Flow<List<AppShortcutRef>> = prefs.recentApps
-    suspend fun recordAppLaunch(ref: AppShortcutRef) = prefs.recordAppLaunch(ref)
-    suspend fun removeFromRecentApps(ref: AppShortcutRef) = prefs.removeFromRecentApps(ref)
 
-    val milestoneTargets: Flow<List<MilestoneTarget>> = prefs.milestoneTargets
-    suspend fun setMilestoneTargets(targets: List<MilestoneTarget>) = prefs.setMilestoneTargets(targets)
-
-    val alarms: Flow<List<AlarmItem>> = prefs.alarms
-    suspend fun setAlarms(alarms: List<AlarmItem>) = prefs.setAlarms(alarms)
+    val studyTargets: Flow<List<StudyTarget>> = prefs.studyTargets
+    suspend fun setStudyTargets(targets: List<StudyTarget>) = prefs.setStudyTargets(targets)
 
     val appShortcuts: Flow<List<AppShortcutRef>> = prefs.appShortcuts
     suspend fun setAppShortcuts(shortcuts: List<AppShortcutRef>) = prefs.setAppShortcuts(shortcuts)

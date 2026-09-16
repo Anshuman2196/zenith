@@ -14,22 +14,22 @@ import androidx.activity.ComponentActivity
  * directly - one tap, no manual navigation - so this always prefers that path and only falls
  * back to opening Settings on older Android versions.
  */
-object DefaultLauncherHelper {
+object DefaultHomeHelper {
 
-    fun isDefaultLauncher(context: Context): Boolean {
+    fun isDefaultHomeApp(context: Context): Boolean {
         val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         val resolved = context.packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
         return resolved?.activityInfo?.packageName == context.packageName
     }
 
     /** Shows the "set as default Home app" prompt if - and only if - it isn't already default. */
-    fun requestIfNeeded(activity: ComponentActivity, launcher: androidx.activity.result.ActivityResultLauncher<Intent>) {
-        if (isDefaultLauncher(activity)) return
+    fun requestIfNeeded(activity: ComponentActivity, homeRoleRequest: androidx.activity.result.ActivityResultLauncher<Intent>) {
+        if (isDefaultHomeApp(activity)) return
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val roleManager = activity.getSystemService(Context.ROLE_SERVICE) as? RoleManager
             if (roleManager != null && roleManager.isRoleAvailable(RoleManager.ROLE_HOME) && !roleManager.isRoleHeld(RoleManager.ROLE_HOME)) {
-                runCatching { launcher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)) }
+                runCatching { homeRoleRequest.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_HOME)) }
                 return
             }
         }

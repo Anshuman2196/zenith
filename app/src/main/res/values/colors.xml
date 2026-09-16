@@ -1,4 +1,4 @@
 <resources>
-    <color name="launcher_background">#000000</color>
-    <color name="ic_launcher_background">#000000</color>
+    <color name="zenith_background">#000000</color>
+    <color name="zenith_icon_background">#000000</color>
 </resources>

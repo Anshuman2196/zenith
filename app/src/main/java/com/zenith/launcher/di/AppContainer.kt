@@ -7,7 +7,7 @@ import com.zenith.launcher.data.repository.SettingsRepository
 
 /**
  * Minimal manual DI container (no Hilt/Dagger, to keep Gradle/CI simple). Created once in
- * [com.zenith.launcher.LauncherApplication] and handed to ViewModels via
+ * [com.zenith.launcher.ZenithApplication] and handed to ViewModels via
  * [com.zenith.launcher.ui.ViewModelFactory].
  */
 class AppContainer(context: Context) {
