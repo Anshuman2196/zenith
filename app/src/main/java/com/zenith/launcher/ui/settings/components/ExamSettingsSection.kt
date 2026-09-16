@@ -38,18 +38,18 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 /**
- * Exam Settings: a fully user-managed list of exams (no fixed JEE Main/Advanced pair anymore) -
- * add as many as needed, rename them, set or change each one's target date, or remove one. Every
- * entry here shows up as a row in the Home screen's Exam Countdown widget.
+ * Deadline settings: a fully user-managed list of deadlines (no fixed JEE Main/Advanced pair anymore) -
+ * add as many as needed, rename them, set or change each target date, or remove one. Every
+ * entry here shows up as a row in the Home screen's Deadlines widget.
  */
 @Composable
 fun ExamSettingsSection(examSettings: ExamSettings, onChange: (ExamSettings) -> Unit) {
     var showAddDialog by remember { mutableStateOf(false) }
 
-    SettingsSectionCard(title = "Exams") {
+    SettingsSectionCard(title = "Deadlines") {
         if (examSettings.exams.isEmpty()) {
             Text(
-                "No exams yet - add one below.",
+                "No deadlines yet - add one below.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -72,7 +72,7 @@ fun ExamSettingsSection(examSettings: ExamSettings, onChange: (ExamSettings) -> 
             TextButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Add exam")
+                Text("Add deadline")
             }
         }
     }
@@ -136,12 +136,12 @@ private fun AddExamDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add exam") },
+        title = { Text("Add deadline") },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Exam name") },
+                label = { Text("Deadline name") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )

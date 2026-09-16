@@ -24,14 +24,14 @@ fun WidgetVisibilitySection(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         ToggleRow("Deadlines", visibility.countdownEnabled) { checked -> onChange { it.copy(countdownEnabled = checked) } }
-        ToggleRow("Study Timer / Pomodoro", visibility.pomodoroEnabled) { checked -> onChange { it.copy(pomodoroEnabled = checked) } }
-        ToggleRow("Daily To-Do List", visibility.todoEnabled) { checked -> onChange { it.copy(todoEnabled = checked) } }
+        ToggleRow("Study Timer", visibility.pomodoroEnabled) { checked -> onChange { it.copy(pomodoroEnabled = checked) } }
+        ToggleRow("Todo", visibility.todoEnabled) { checked -> onChange { it.copy(todoEnabled = checked) } }
         ToggleRow("Backlog", visibility.chapterBacklogEnabled) { checked -> onChange { it.copy(chapterBacklogEnabled = checked) } }
-        ToggleRow("Quick PDF Launcher", visibility.pdfLauncherEnabled) { checked -> onChange { it.copy(pdfLauncherEnabled = checked) } }
-        ToggleRow("Focus Mode Toggle", visibility.focusModeEnabled) { checked -> onChange { it.copy(focusModeEnabled = checked) } }
+        ToggleRow("Library", visibility.pdfLauncherEnabled) { checked -> onChange { it.copy(pdfLauncherEnabled = checked) } }
+        ToggleRow("Focus Mode", visibility.focusModeEnabled) { checked -> onChange { it.copy(focusModeEnabled = checked) } }
         ToggleRow("Targets", visibility.milestoneEnabled) { checked -> onChange { it.copy(milestoneEnabled = checked) } }
-        ToggleRow("App Shortcuts", visibility.appShortcutsEnabled) { checked -> onChange { it.copy(appShortcutsEnabled = checked) } }
-        ToggleRow("Status (Wi-Fi / Battery / Bluetooth)", visibility.systemStatusEnabled) { checked -> onChange { it.copy(systemStatusEnabled = checked) } }
+        ToggleRow("Shortcuts", visibility.appShortcutsEnabled) { checked -> onChange { it.copy(appShortcutsEnabled = checked) } }
+        ToggleRow("Status", visibility.systemStatusEnabled) { checked -> onChange { it.copy(systemStatusEnabled = checked) } }
     }
 }
 

@@ -34,6 +34,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.parseToJsonElement
 
 /** Single top-level DataStore instance for the whole app process. */
 private val Context.dataStore by preferencesDataStore(name = "launcher_settings")
@@ -240,7 +241,7 @@ class PreferencesManager(private val context: Context) {
         return mutableColumns
     }
 
-    // ---------- Daily To-Do list ----------
+    // ---------- Todo list ----------
 
     val todoList: Flow<List<TodoItem>> = context.dataStore.data.map { prefs ->
         prefs[Keys.TODO_LIST]?.let { runCatching { json.decodeFromString<List<TodoItem>>(it) }.getOrNull() } ?: emptyList()

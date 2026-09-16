@@ -2,7 +2,7 @@ package com.zenith.launcher.data.model
 
 import kotlinx.serialization.Serializable
 
-/** One item in the Daily To-Do widget. Serializable so the list persists as one JSON blob. */
+/** One item in the Todo widget. Serializable so the list persists as one JSON blob. */
 @Serializable
 data class TodoItem(
     val id: String,

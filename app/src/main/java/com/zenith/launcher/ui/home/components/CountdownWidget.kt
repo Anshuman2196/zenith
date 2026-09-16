@@ -16,9 +16,9 @@ import com.zenith.launcher.ui.home.ExamCountdown
 import com.zenith.launcher.ui.home.LauncherCopy
 
 /**
- * Widget: Exam Countdown - live "days remaining" for every exam the user has added (see
- * Settings > Exams; there's no fixed exam list anymore, this simply reflects whatever's there).
- * Null [ExamCountdown.daysLeft] means that exam's date hasn't been set yet.
+ * Widget: Deadlines - live "days remaining" for every deadline the user has added (see
+ * Settings > Deadlines; there's no fixed exam list anymore, this simply reflects whatever's there).
+ * Null [ExamCountdown.daysLeft] means that deadline's date hasn't been set yet.
  */
 @Composable
 fun CountdownWidget(exams: List<ExamCountdown>) {

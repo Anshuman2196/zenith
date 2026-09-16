@@ -14,6 +14,6 @@ data class ExamTarget(
     val dateMillis: Long? = null
 )
 
-/** Every exam the user is tracking, shown by the Home screen's Exam Countdown widget. */
+/** Every exam the user is tracking, shown by the Home screen's Deadlines widget. */
 @Serializable
 data class ExamSettings(val exams: List<ExamTarget> = emptyList())

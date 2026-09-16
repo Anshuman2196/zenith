@@ -58,6 +58,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -111,7 +112,8 @@ private val EDGE_SWIPE_STRIP_WIDTH = 12.dp
 private val POMODORO_ACCESSIBLE_WIDGETS = setOf(
     WidgetIds.POMODORO,
     WidgetIds.TODO,
-    WidgetIds.CHAPTER_BACKLOG
+    WidgetIds.CHAPTER_BACKLOG,
+    WidgetIds.PDF_LAUNCHER
 )
 
 /**
@@ -130,6 +132,8 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
     var isPomodoroRunning by remember { mutableStateOf(false) }
     var showFocusExitPause by remember { mutableStateOf(false) }
     var isPomodoroProtectionActive by remember { mutableStateOf(false) }
+    var pomodoroPauseSeconds by remember { mutableStateOf(0) }
+    var pomodoroPauseMessage by remember { mutableStateOf("") }
 
     // Protect only deliberate focus/reflection windows, not the whole Pomodoro. This keeps the
     // Android system surface available during ordinary study time while closing the escape hatch
@@ -286,7 +290,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                             .then(
                                                 if (isPomodoroRunning) Modifier else Modifier.gridDragToReorder(dragState, id)
                                             )
-                                            .then(if (isLockedByPomodoro) Modifier.blur(22.dp) else Modifier)
+                                            .then(if (isLockedByPomodoro) Modifier.blur(10.dp) else Modifier)
                                             .height((state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160).coerceIn(88, 600).dp)
                                     ) {
                                         WidgetForId(
@@ -301,7 +305,11 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                                 else viewModel.toggleFocusMode()
                                             },
                                             onPomodoroRunningChanged = { isPomodoroRunning = it },
-                                            onPomodoroProtectionChanged = { isPomodoroProtectionActive = it }
+                                            onPomodoroProtectionChanged = { isPomodoroProtectionActive = it },
+                                            onPomodoroPauseChanged = { active, seconds, message ->
+                                                pomodoroPauseSeconds = if (active) seconds else 0
+                                                pomodoroPauseMessage = if (active) message else ""
+                                            }
                                         )
                                         if (isLockedByPomodoro) {
                                             // Keep locked widgets recognizable but visually subordinate:
@@ -311,7 +319,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                             Box(
                                                 modifier = Modifier
                                                     .matchParentSize()
-                                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.24f))
+                                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.12f))
                                                     .pointerInput(id) { detectTapGestures { } }
                                             )
                                         }
@@ -395,7 +403,11 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                 canUninstall = viewModel::canUninstall,
                 onOpenAppInfo = viewModel::openAppInfo,
                 onSetCategory = viewModel::setAppCategory,
-                onPinShortcut = viewModel::addAppShortcut
+                onPinShortcut = viewModel::addAppShortcut,
+                focusAllowedPackages = state.focusAllowedApps,
+                distractionPackages = state.distractionApps,
+                onToggleFocusAllowed = viewModel::toggleFocusAllowedApp,
+                onToggleDistraction = viewModel::toggleDistractionApp
             )
         }
 
@@ -406,9 +418,15 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
             })
         }
 
-        state.distractionPauseApp?.let { app ->
+        if (pomodoroPauseSeconds > 0) {
+            PomodoroReflectionPause(
+                secondsLeft = pomodoroPauseSeconds,
+                message = pomodoroPauseMessage
+            )
+        }
+
+        state.distractionPauseApp?.let {
             DistractionLaunchPause(
-                appName = app.label,
                 secondsLeft = state.distractionPauseSeconds,
                 message = state.distractionPauseMessage
             )
@@ -473,44 +491,66 @@ private fun WidgetResizeGrip(
     }
 }
 
-/** A short, non-interactive pause shown before a user-configured distraction app opens. */
+/** A short, non-interactive reflection shown when Zenith intercepts a distraction launch. */
 @Composable
-private fun DistractionLaunchPause(appName: String, secondsLeft: Int, message: String) {
-    val breathing = rememberInfiniteTransition(label = "distractionPauseBreath")
+private fun DistractionLaunchPause(secondsLeft: Int, message: String) {
+    ReflectionPauseSurface(
+        title = "Distractions",
+        secondsLeft = secondsLeft,
+        message = message,
+        ringSize = 190.dp
+    )
+}
+
+/** The same full-screen reflection treatment used by the other deliberate pause moments. */
+@Composable
+private fun PomodoroReflectionPause(secondsLeft: Int, message: String) {
+    ReflectionPauseSurface(
+        title = "Pomodoro",
+        secondsLeft = secondsLeft,
+        message = message,
+        ringSize = 210.dp
+    )
+}
+
+@Composable
+private fun ReflectionPauseSurface(
+    title: String,
+    secondsLeft: Int,
+    message: String,
+    ringSize: Dp
+) {
+    val breathing = rememberInfiniteTransition(label = "reflectionPauseBreath-$title")
     val ringScale by breathing.animateFloat(
-        initialValue = 0.92f,
-        targetValue = 1.08f,
+        initialValue = 0.90f,
+        targetValue = 1.10f,
         animationSpec = infiniteRepeatable(
-            tween(2200, easing = FastOutSlowInEasing),
+            tween(2800, easing = FastOutSlowInEasing),
             RepeatMode.Reverse
         ),
-        label = "distractionPauseBreathScale"
+        label = "reflectionPauseBreathScale-$title"
     )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.78f))
+            .background(Color.Black.copy(alpha = 0.82f))
             .pointerInput(Unit) { detectTapGestures { } },
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
-                .size(190.dp)
+                .size(ringSize)
                 .graphicsLayer { scaleX = ringScale; scaleY = ringScale }
-                .clip(RoundedCornerShape(95.dp))
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f))
+                .clip(RoundedCornerShape(ringSize / 2))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
         )
         Column(
             modifier = Modifier.padding(horizontal = 34.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                LauncherCopy.distractionPauseTitle,
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White
-            )
+            Text(title, style = MaterialTheme.typography.titleLarge, color = Color.White)
             Text(
                 message,
                 style = MaterialTheme.typography.bodyLarge,
@@ -518,15 +558,9 @@ private fun DistractionLaunchPause(appName: String, secondsLeft: Int, message: S
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
             Text(
-                "$appName · opening in ${secondsLeft.coerceAtLeast(0)} s",
-                style = MaterialTheme.typography.labelLarge,
+                secondsLeft.coerceAtLeast(0).toString(),
+                style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                LauncherCopy.distractionPauseFooter,
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.7f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
     }
@@ -681,7 +715,8 @@ private fun WidgetForId(
     onShowAddPdf: () -> Unit,
     onFocusToggle: () -> Unit = {},
     onPomodoroRunningChanged: (Boolean) -> Unit = {},
-    onPomodoroProtectionChanged: (Boolean) -> Unit = {}
+    onPomodoroProtectionChanged: (Boolean) -> Unit = {},
+    onPomodoroPauseChanged: (Boolean, Int, String) -> Unit = { _, _, _ -> }
 ) {
     when (id) {
         WidgetIds.COUNTDOWN -> CountdownWidget(state.examCountdowns)
@@ -692,7 +727,8 @@ private fun WidgetForId(
             onToggleAlarm = viewModel::toggleAlarm,
             onDeleteAlarm = viewModel::deleteAlarm,
             onPomodoroRunningChanged = onPomodoroRunningChanged,
-            onPomodoroProtectionChanged = onPomodoroProtectionChanged
+            onPomodoroProtectionChanged = onPomodoroProtectionChanged,
+            onPomodoroPauseChanged = onPomodoroPauseChanged
         )
         WidgetIds.TODO -> TodoWidget(
             items = state.todoItems,

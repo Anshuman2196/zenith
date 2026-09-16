@@ -21,7 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 /**
- * Dialog for adding one Quick Access PDF link. Uses the system file picker (Storage Access
+ * Dialog for adding one Library link. Uses the system file picker (Storage Access
  * Framework) so the launcher never needs broad storage permissions - it only requests
  * persistable read access to the one file the user picks.
  */
@@ -39,18 +39,18 @@ fun AddPdfDialog(onDismiss: () -> Unit, onConfirm: (title: String, uriString: St
             }
             pickedUri = uri
             if (title.isBlank()) {
-                title = uri.lastPathSegment?.substringAfterLast('/') ?: "Study PDF"
+                title = uri.lastPathSegment?.substringAfterLast('/') ?: "PDF resource"
             }
         }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add PDF shortcut") },
+        title = { Text("Add Library item") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(onClick = { pickerLauncher.launch(arrayOf("application/pdf")) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (pickedUri == null) "Choose PDF file" else "PDF selected - change")
+                    Text(if (pickedUri == null) "Choose PDF" else "PDF selected - change")
                 }
                 OutlinedTextField(
                     value = title,
@@ -63,7 +63,7 @@ fun AddPdfDialog(onDismiss: () -> Unit, onConfirm: (title: String, uriString: St
         },
         confirmButton = {
             TextButton(
-                onClick = { pickedUri?.let { onConfirm(title.ifBlank { "Study PDF" }, it.toString()) } },
+                onClick = { pickedUri?.let { onConfirm(title.ifBlank { "PDF resource" }, it.toString()) } },
                 enabled = pickedUri != null
             ) { Text("Add") }
         },

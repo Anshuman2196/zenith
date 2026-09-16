@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.ui.home.LauncherCopy
 
-/** Widget 3: Daily To-Do List - a quick checklist for the day's study goals. */
+/** Widget 3: Todo - a quick checklist for the day's study goals. */
 @Composable
 fun TodoWidget(
     items: List<TodoItem>,

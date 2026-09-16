@@ -12,7 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 
-/** Simple text-entry dialog for adding one Daily To-Do item. */
+/** Simple text-entry dialog for adding one Todo item. */
 @Composable
 fun AddTodoDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var text by remember { mutableStateOf("") }

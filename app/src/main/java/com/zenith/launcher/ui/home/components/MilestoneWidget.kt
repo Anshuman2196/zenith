@@ -29,7 +29,7 @@ import com.zenith.launcher.data.model.MilestoneTarget
 import com.zenith.launcher.ui.home.LauncherCopy
 
 /**
- * Widget: "Milestone Targets" - one or more self-set goals for upcoming mock tests, each with a
+ * Widget: "Targets" - one or more self-set goals for upcoming study goals, each with a
  * target score and (optionally) the most recent actual score. Tap + to add another target, the
  * pencil on a row to edit it, or the trash icon to remove it.
  */
@@ -118,12 +118,12 @@ private fun EditMilestoneDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit milestone target") },
+        title = { Text("Edit target") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = testName, onValueChange = { testName = it },
-                    label = { Text("Test name") }, singleLine = true,
+                    label = { Text("Target name") }, singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
@@ -147,7 +147,7 @@ private fun EditMilestoneDialog(
             TextButton(onClick = {
                 onConfirm(
                     target.copy(
-                        testName = testName.ifBlank { "Comprehensive Mock Test" },
+                        testName = testName.ifBlank { "Study target" },
                         targetScore = targetScore.toIntOrNull() ?: target.targetScore,
                         maxScore = maxScore.toIntOrNull() ?: target.maxScore,
                         lastScore = lastScore.toIntOrNull()

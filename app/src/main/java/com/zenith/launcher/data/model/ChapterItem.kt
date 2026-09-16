@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class ChapterUrgency { LOW, MEDIUM, HIGH }
 
-/** One chapter/topic tracked in the "Chapter Backlog" widget. */
+/** One chapter/topic tracked in the "Backlog" widget. */
 @Serializable
 data class ChapterItem(
     val id: String,

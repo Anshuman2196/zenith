@@ -3,7 +3,7 @@ package com.zenith.launcher.data.model
 import kotlinx.serialization.Serializable
 
 /**
- * One self-set goal for an upcoming mock test/exam attempt, shown in the "Milestone Target"
+ * One self-set goal for an upcoming mock test/exam attempt, shown in the "Targets"
  * widget - a target score to hit, the most recent actual score, and (optionally) when that test
  * is, so the widget can show a "days left" hint next to a readiness gauge. Several can be tracked
  * at once (e.g. one per subject, or one per upcoming mock) - see

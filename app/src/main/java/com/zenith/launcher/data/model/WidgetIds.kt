@@ -52,8 +52,13 @@ object WidgetIds {
     )
 
     val DEFAULT_COLUMNS: List<List<String>> = listOf(
-        listOf(COUNTDOWN, FOCUS_MODE, MILESTONE),
-        listOf(POMODORO, SYSTEM_STATUS),
-        listOf(TODO, CHAPTER_BACKLOG, PDF_LAUNCHER, APP_SHORTCUTS)
+        // Left column
+        listOf(COUNTDOWN, FOCUS_MODE, MILESTONE, SYSTEM_STATUS),
+
+        // Middle column
+        listOf(POMODORO, APP_SHORTCUTS),
+
+        // Right column
+        listOf(TODO, CHAPTER_BACKLOG, PDF_LAUNCHER)
     )
 }

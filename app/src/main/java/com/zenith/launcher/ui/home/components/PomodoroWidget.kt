@@ -61,7 +61,8 @@ fun PomodoroWidget(
     onToggleAlarm: (id: String, enabled: Boolean) -> Unit,
     onDeleteAlarm: (id: String) -> Unit,
     onPomodoroRunningChanged: (Boolean) -> Unit = {},
-    onPomodoroProtectionChanged: (Boolean) -> Unit = {}
+    onPomodoroProtectionChanged: (Boolean) -> Unit = {},
+    onPomodoroPauseChanged: (Boolean, Int, String) -> Unit = { _, _, _ -> }
 ) {
     var mode by rememberSaveable { mutableStateOf(TimerMode.POMODORO) }
     var isPomodoroRunning by rememberSaveable { mutableStateOf(false) }
@@ -95,7 +96,8 @@ fun PomodoroWidget(
                     isPomodoroRunning = it
                     onPomodoroRunningChanged(it)
                 },
-                onPomodoroProtectionChanged = onPomodoroProtectionChanged
+                onPomodoroProtectionChanged = onPomodoroProtectionChanged,
+                onPomodoroPauseChanged = onPomodoroPauseChanged
             )
             TimerMode.STOPWATCH -> StopwatchSection()
             TimerMode.ALARM -> AlarmSection(
@@ -126,7 +128,8 @@ private fun StopwatchSection() {
 @Composable
 private fun PomodoroSection(
     onPomodoroRunningChanged: (Boolean) -> Unit,
-    onPomodoroProtectionChanged: (Boolean) -> Unit
+    onPomodoroProtectionChanged: (Boolean) -> Unit,
+    onPomodoroPauseChanged: (Boolean, Int, String) -> Unit
 ) {
     val context = LocalContext.current
     var focusMinutes by rememberSaveable { mutableIntStateOf(25) }
@@ -143,8 +146,16 @@ private fun PomodoroSection(
     var stopPauseKind by rememberSaveable { mutableIntStateOf(0) }
 
     LaunchedEffect(isRunning) { onPomodoroRunningChanged(isRunning) }
-    LaunchedEffect(stopPauseSeconds, awaitingNextPhase) { onPomodoroProtectionChanged(stopPauseSeconds > 0 || awaitingNextPhase) }
-    DisposableEffect(Unit) { onDispose { onPomodoroProtectionChanged(false) } }
+    LaunchedEffect(stopPauseSeconds, awaitingNextPhase) {
+        onPomodoroProtectionChanged(stopPauseSeconds > 0 || awaitingNextPhase)
+        onPomodoroPauseChanged(stopPauseSeconds > 0, stopPauseSeconds, stopPauseMessage)
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            onPomodoroProtectionChanged(false)
+            onPomodoroPauseChanged(false, 0, "")
+        }
+    }
     DisposableEffect(Unit) { onDispose { onPomodoroRunningChanged(false) } }
 
     fun phaseDuration(current: PomodoroPhase) = when (current) {
@@ -205,12 +216,6 @@ private fun PomodoroSection(
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        if (stopPauseSeconds > 0) {
-            Text(if (stopPauseKind == 2) "Let it land" else "Before you stop", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            Text(stopPauseSeconds.toString(), style = MaterialTheme.typography.headlineMedium)
-            Text(stopPauseMessage, style = MaterialTheme.typography.bodySmall)
-            Spacer(Modifier.height(8.dp))
-        }
         Text(phase.label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         Text(formatSeconds(secondsLeft), style = MaterialTheme.typography.headlineMedium)
         if (awaitingNextPhase) Text(LauncherCopy.pomodoroTransition[completedFocusSessions % LauncherCopy.pomodoroTransition.size], style = MaterialTheme.typography.labelSmall)
@@ -219,7 +224,7 @@ private fun PomodoroSection(
             FilledTonalButton(
                 enabled = stopPauseSeconds == 0,
                 onClick = {
-                    // Pausing remains immediate; only an explicit stop/reset gets the reflective pause.
+                    // Pause remains immediate; only an explicit Stop gets the reflective seven-second pause.
                     isRunning = !isRunning
                     awaitingNextPhase = false
                     isRinging = false

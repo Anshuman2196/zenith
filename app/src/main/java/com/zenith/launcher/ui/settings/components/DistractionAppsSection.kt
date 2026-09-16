@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.AppInfo
 
-/** User-managed list of apps that receive a five-second reflective pause before opening. */
+/** User-managed list of apps that Zenith treats as distractions before launch. */
 @Composable
 fun DistractionAppsSection(
     apps: List<AppInfo>,
@@ -36,7 +36,7 @@ fun DistractionAppsSection(
     }
     val content: @Composable ColumnScope.() -> Unit = {
         Text(
-            "Choose apps that tend to pull your attention away. Zenith adds a five-second pause before opening them.",
+            "Choose apps that tend to pull your attention away. Zenith inserts a brief reflection before launch.",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -66,9 +68,8 @@ import com.zenith.launcher.data.model.displayName
  * icons on the same frosted-glass cards used everywhere else in the app, so opening the drawer
  * feels like sliding a panel over the same surface rather than switching to a different screen.
  *
- * Apps are grouped under category headers (Study / Games / Social / Entertainment / Other, see
- * [AppCategory]) - every app defaults to Other until re-assigned, either here via long-press >
- * "Move to..." or in bulk from Settings > App Categories.
+ * Apps are grouped under user-managed category headers. A long-press can change the category,
+ * pin the app, or classify it for Focus Mode / Distractions without leaving the drawer.
  */
 @Composable
 fun AppDrawerOverlay(
@@ -82,7 +83,11 @@ fun AppDrawerOverlay(
     canUninstall: (AppInfo) -> Boolean,
     onOpenAppInfo: (AppInfo) -> Unit,
     onSetCategory: (AppInfo, String) -> Unit,
-    onPinShortcut: (AppInfo) -> Unit
+    onPinShortcut: (AppInfo) -> Unit,
+    focusAllowedPackages: Set<String>,
+    distractionPackages: Set<String>,
+    onToggleFocusAllowed: (AppInfo) -> Unit,
+    onToggleDistraction: (AppInfo) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
@@ -165,12 +170,16 @@ fun AppDrawerOverlay(
             app = app,
             currentCategory = categories[app.packageName] ?: AppCategory.OTHER.displayName,
             categoryTypes = categoryTypes,
+            focusAllowed = app.packageName in focusAllowedPackages,
+            isDistraction = app.packageName in distractionPackages,
             canUninstall = canUninstall(app),
             onDismiss = { menuApp = null },
             onPin = { onPinShortcut(app); menuApp = null },
             onAppInfo = { onOpenAppInfo(app); menuApp = null },
             onUninstall = { onUninstall(app); menuApp = null },
-            onSetCategory = { onSetCategory(app, it); menuApp = null }
+            onSetCategory = { onSetCategory(app, it); menuApp = null },
+            onToggleFocusAllowed = { onToggleFocusAllowed(app) },
+            onToggleDistraction = { onToggleDistraction(app) }
         )
     }
 }
@@ -267,7 +276,7 @@ private fun DrawerSearchBar(query: String, onQueryChange: (String) -> Unit, onCl
         Box(modifier = Modifier.weight(1f)) {
             if (query.isEmpty()) {
                 Text(
-                    "Search for Apps in Zenith",
+                    "Search apps",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.55f)
                 )
@@ -337,12 +346,16 @@ private fun AppContextMenuDialog(
     app: AppInfo,
     currentCategory: String,
     categoryTypes: List<String>,
+    focusAllowed: Boolean,
+    isDistraction: Boolean,
     canUninstall: Boolean,
     onDismiss: () -> Unit,
     onPin: () -> Unit,
     onAppInfo: () -> Unit,
     onUninstall: () -> Unit,
-    onSetCategory: (String) -> Unit
+    onSetCategory: (String) -> Unit,
+    onToggleFocusAllowed: () -> Unit,
+    onToggleDistraction: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -351,25 +364,63 @@ private fun AppContextMenuDialog(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 ActionRow(icon = Icons.Default.PushPin, label = "Pin to Home", onClick = onPin)
                 ActionRow(icon = Icons.Default.Info, label = "App info", onClick = onAppInfo)
-                if (canUninstall) {
-                    ActionRow(icon = Icons.Default.DeleteOutline, label = "Uninstall", onClick = onUninstall)
-                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Text("Attention", style = MaterialTheme.typography.labelLarge)
+                AttentionToggleRow(
+                    label = "Available in Focus Mode",
+                    checked = focusAllowed,
+                    onCheckedChange = onToggleFocusAllowed
+                )
+                AttentionToggleRow(
+                    label = "Distraction",
+                    checked = isDistraction,
+                    onCheckedChange = onToggleDistraction
+                )
 
                 Spacer(Modifier.height(8.dp))
-                Text("Move to...", style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    categoryTypes.forEach { option ->
-                        FilterChip(
-                            selected = currentCategory == option,
-                            onClick = { onSetCategory(option) },
-                            label = { Text(option, style = MaterialTheme.typography.labelSmall) }
-                        )
+                Text("Category", style = MaterialTheme.typography.labelLarge)
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    categoryTypes.chunked(3).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            row.forEach { option ->
+                                FilterChip(
+                                    selected = currentCategory == option,
+                                    onClick = { onSetCategory(option) },
+                                    label = { Text(option, style = MaterialTheme.typography.labelSmall) }
+                                )
+                            }
+                        }
                     }
+                }
+
+                if (canUninstall) {
+                    Spacer(Modifier.height(8.dp))
+                    ActionRow(icon = Icons.Default.DeleteOutline, label = "Uninstall", onClick = onUninstall)
                 }
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
     )
+}
+
+@Composable
+private fun AttentionToggleRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Switch(checked = checked, onCheckedChange = { onCheckedChange() })
+    }
 }
 
 @Composable

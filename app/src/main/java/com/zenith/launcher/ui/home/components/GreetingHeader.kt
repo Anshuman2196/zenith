@@ -40,7 +40,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 /**
- * Top header, matching the reference design: the aspirant's name is centered across the full
+ * Top header, matching the reference design: the student's name is centered across the full
  * width of the screen (not just the leftover space next to the clock), while the live clock +
  * date and the gear icon into Settings sit pinned to the top-right corner as their own group.
  *

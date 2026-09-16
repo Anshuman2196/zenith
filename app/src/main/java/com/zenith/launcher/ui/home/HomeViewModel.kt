@@ -58,7 +58,6 @@ data class HomeUiState(
     val appCategories: Map<String, String> = emptyMap(),
     val appCategoryTypes: List<String> = emptyList(),
     val lockOnDoubleTap: Boolean = false,
-    val distractionApps: Set<String> = emptySet(),
     val distractionPauseApp: AppInfo? = null,
     val distractionPauseSeconds: Int = 0,
     val distractionPauseMessage: String = "",
@@ -178,7 +177,7 @@ class HomeViewModel(
             todoItems = content.todos, chapterItems = content.chapters, pdfLinks = content.pdfs,
             isFocusModeActive = base.focusActive, background = base.background, isLoadingApps = content.loading,
             milestoneTargets = base.milestoneTargets, alarms = base.alarms, appShortcuts = resolvedShortcuts, recentApps = resolvedRecents,
-            appCategories = base.appCategories, appCategoryTypes = base.appCategoryTypes, lockOnDoubleTap = base.lockOnDoubleTap, distractionApps = base.distractionApps, attentionProtectionMode = base.attentionProtectionMode,
+            appCategories = base.appCategories, appCategoryTypes = base.appCategoryTypes, lockOnDoubleTap = base.lockOnDoubleTap, attentionProtectionMode = base.attentionProtectionMode,
             distractionPauseApp = stateWithPause.pauseApp, distractionPauseSeconds = stateWithPause.pauseSeconds, distractionPauseMessage = stateWithPause.pauseMessage
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
@@ -455,9 +454,27 @@ class HomeViewModel(
         settingsRepository.removeFromRecentApps(AppShortcutRef(app.packageName, app.activityClassName))
     }
 
-    // ---------- App Drawer categories ----------
+    // ---------- App Drawer + attention classification ----------
     fun setAppCategory(app: AppInfo, category: String) = viewModelScope.launch {
         settingsRepository.setAppCategory(app.packageName, category)
+    }
+
+    fun toggleFocusAllowedApp(app: AppInfo) = viewModelScope.launch {
+        val allowed = uiState.value.focusAllowedApps
+        val next = if (app.packageName in allowed) allowed - app.packageName else allowed + app.packageName
+        settingsRepository.setFocusAllowedApps(next)
+        if (app.packageName !in allowed) {
+            settingsRepository.setDistractionApps(uiState.value.distractionApps - app.packageName)
+        }
+    }
+
+    fun toggleDistractionApp(app: AppInfo) = viewModelScope.launch {
+        val distractions = uiState.value.distractionApps
+        val next = if (app.packageName in distractions) distractions - app.packageName else distractions + app.packageName
+        settingsRepository.setDistractionApps(next)
+        if (app.packageName !in distractions) {
+            settingsRepository.setFocusAllowedApps(uiState.value.focusAllowedApps - app.packageName)
+        }
     }
 
     // ---------- Uninstall / app info ----------

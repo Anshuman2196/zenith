@@ -19,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.ChapterUrgency
 
-/** Dialog for adding one item to the Chapter Backlog widget. */
+/** Dialog for adding one item to the Backlog widget. */
 @Composable
 fun AddChapterDialog(
     onDismiss: () -> Unit,

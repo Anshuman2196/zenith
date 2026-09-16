@@ -16,7 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/** Profile Settings: edit + save the aspirant's name, which drives the Home screen greeting. */
+/** Profile Settings: edit + save the student's name, which drives the Home screen greeting. */
 @Composable
 fun ProfileSettingsSection(currentName: String, onSave: (String) -> Unit) {
     var draftName by remember(currentName) { mutableStateOf(currentName) }
@@ -25,7 +25,7 @@ fun ProfileSettingsSection(currentName: String, onSave: (String) -> Unit) {
         OutlinedTextField(
             value = draftName,
             onValueChange = { draftName = it },
-            label = { Text("Your name") },
+            label = { Text("Name") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )

@@ -30,7 +30,7 @@ import com.zenith.launcher.ui.theme.AccentWarning
 import com.zenith.launcher.ui.home.LauncherCopy
 
 /**
- * Widget 4: Chapter Backlog List - pending chapters, revision topics, and weak areas, each tagged
+ * Widget 4: Backlog List - pending chapters, revision topics, and weak areas, each tagged
  * with an urgency (Low/Medium/High). Higher-urgency chapters sort to the top of the list, so the
  * thing that most needs attention is always what's visible first without scrolling.
  */

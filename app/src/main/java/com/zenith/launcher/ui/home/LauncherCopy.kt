@@ -27,16 +27,13 @@ object LauncherCopy {
     )
 
     val distractionPause = listOf(
-        "You can still choose. Give yourself five seconds.",
-        "Is this what you meant to open right now?",
         "Notice the urge before you follow it.",
-        "A short pause can make the choice feel clearer.",
-        "You don’t have to act on every impulse.",
-        "What would you rather have done five minutes from now?"
+        "Is this what you meant to do right now?",
+        "Let the impulse pass through before you act.",
+        "You do not have to answer every urge immediately.",
+        "Stay with the choice for a moment.",
+        "What deserves your attention right now?"
     )
-
-    const val distractionPauseTitle = "Pause before the impulse"
-    const val distractionPauseFooter = "Opening automatically when the pause ends."
 
     val pomodoroStop = listOf(
         "You’re stopping. Give the urge seven seconds before you decide what comes next.",

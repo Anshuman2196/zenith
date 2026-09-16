@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.PdfLink
 import com.zenith.launcher.ui.home.LauncherCopy
 
-/** Widget 5: Quick Access PDF Launcher - one-tap shortcuts to notes, papers, formula sheets. */
+/** Widget 5: Library - one-tap shortcuts to notes, papers, formula sheets. */
 @Composable
 fun PdfLauncherWidget(
     links: List<PdfLink>,

@@ -109,6 +109,9 @@ class SettingsViewModel(
         val current = uiState.value.focusAllowedApps
         val updated = if (packageName in current) current - packageName else current + packageName
         settingsRepository.setFocusAllowedApps(updated)
+        if (packageName !in current) {
+            settingsRepository.setDistractionApps(uiState.value.distractionApps - packageName)
+        }
     }
 
     // ---------- Distraction apps ----------
@@ -116,6 +119,9 @@ class SettingsViewModel(
         val current = uiState.value.distractionApps
         val updated = if (packageName in current) current - packageName else current + packageName
         settingsRepository.setDistractionApps(updated)
+        if (packageName !in current) {
+            settingsRepository.setFocusAllowedApps(uiState.value.focusAllowedApps - packageName)
+        }
     }
 
     // ---------- Background customization ----------

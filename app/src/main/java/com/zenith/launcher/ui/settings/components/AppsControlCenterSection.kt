@@ -25,10 +25,10 @@ fun AppsControlCenterSection(
 ) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     SettingsSectionCard(title = "Apps control centre") {
-        Text("Choose what stays available in Focus Mode, what gets a five-second pause, and how apps are organized.")
+        Text("Choose what stays available in Focus Mode, what Zenith treats as a distraction, and how apps are organized.")
         TabRow(selectedTabIndex = tab) {
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Focus Mode") })
-            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Pause") })
+            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Distractions") })
             Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Drawer") })
         }
         if (tab == 0) {
