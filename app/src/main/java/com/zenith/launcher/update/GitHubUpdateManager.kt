@@ -1,10 +1,8 @@
 package com.zenith.launcher.update
-
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import com.zenith.launcher.BuildConfig
@@ -16,6 +14,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+
 
 @Serializable
 data class GitHubRelease(
@@ -49,8 +48,8 @@ sealed interface UpdateCheckResult {
 object GitHubUpdateManager {
     private const val OWNER = "Anshuman2196"
     private const val REPOSITORY = "zenith"
-    private const val LATEST_RELEASE_URL =
-        "https://api.github.com/repos/$OWNER/$REPOSITORY/releases/latest"
+    private const val RELEASES_URL =
+        "https://api.github.com/repos/$OWNER/$REPOSITORY/releases?per_page=1"
     private const val APK_MIME = "application/vnd.android.package-archive"
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -68,7 +67,10 @@ object GitHubUpdateManager {
             if (connection.responseCode !in 200..299) {
                 throw IllegalStateException("GitHub returned HTTP ${connection.responseCode}")
             }
-            val release = connection.inputStream.bufferedReader().use { json.decodeFromString<GitHubRelease>(it.readText()) }
+            val releases = connection.inputStream.bufferedReader().use {
+                json.decodeFromString<List<GitHubRelease>>(it.readText())
+            }
+            val release = releases.firstOrNull() ?: return@withContext UpdateCheckResult.UpToDate
             val apk = release.assets.firstOrNull { it.name.endsWith(".apk", ignoreCase = true) }
                 ?: throw IllegalStateException("The latest GitHub release does not contain an APK asset.")
             val latest = normalizeVersion(release.tagName)

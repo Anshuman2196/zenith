@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.settings.components
-
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -22,6 +21,7 @@ import java.io.File
 import com.zenith.launcher.data.model.FontChoice
 import com.zenith.launcher.ui.theme.displayName
 import com.zenith.launcher.ui.theme.toFontFamily
+
 
 /**
  * Font picker: re-skins every piece of text in the launcher, including the Home screen greeting.

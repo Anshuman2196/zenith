@@ -1,9 +1,9 @@
 package com.zenith.launcher.util
-
 import android.app.WallpaperManager
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+
 
 /**
  * Keeps the phone's actual wallpaper (Home and, optionally, Lock screen) in sync with whatever

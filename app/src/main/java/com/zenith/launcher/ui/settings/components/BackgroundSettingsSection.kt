@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.settings.components
-
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -27,7 +26,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.util.BitmapUtils
+
 
 /** Preset swatches offered alongside "pick a photo" - kept close to the app's calm palette. */
 private val PRESET_COLORS: List<Long> = listOf(

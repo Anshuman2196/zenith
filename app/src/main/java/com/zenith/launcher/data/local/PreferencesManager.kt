@@ -1,5 +1,4 @@
 package com.zenith.launcher.data.local
-
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -34,6 +33,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+
 /** Single top-level DataStore instance for the whole app process. The on-disk name stays stable for upgrades. */
 private val Context.dataStore by preferencesDataStore(name = "launcher_settings")
 
@@ -57,6 +57,7 @@ class PreferencesManager(private val context: Context) {
         val ICON_PACK_PACKAGE = stringPreferencesKey("icon_pack_package")
         val WIDGET_VISIBILITY = stringPreferencesKey("widget_visibility_json")
         val WIDGET_ORDER = stringPreferencesKey("widget_order_json")
+        val PHONE_WIDGET_ORDER = stringPreferencesKey("phone_widget_order_json")
         val WIDGET_SIZES = stringPreferencesKey("widget_sizes_json")
         val WIDGET_HEIGHTS = stringPreferencesKey("widget_heights_json")
         val WIDGET_HEIGHTS_VERSION = stringPreferencesKey("widget_heights_version")
@@ -180,6 +181,20 @@ class PreferencesManager(private val context: Context) {
 
     suspend fun setWidgetColumns(columns: List<List<String>>) {
         context.dataStore.edit { it[Keys.WIDGET_ORDER] = json.encodeToString(columns) }
+    }
+
+    /** Separate phone order so switching between phone and tablet never rewrites the other layout. */
+    val phoneWidgetOrder: Flow<List<String>> = context.dataStore.data.map { prefs ->
+        val raw = prefs[Keys.PHONE_WIDGET_ORDER]
+        val saved = raw?.let { runCatching { json.decodeFromString<List<String>>(it) }.getOrNull() }
+        val base = saved ?: WidgetIds.DEFAULT_ORDER
+        val visible = base.filter { it in WidgetIds.DEFAULT_ORDER }
+        val missing = WidgetIds.DEFAULT_ORDER.filterNot { it in visible }
+        visible + missing
+    }
+
+    suspend fun setPhoneWidgetOrder(order: List<String>) {
+        context.dataStore.edit { it[Keys.PHONE_WIDGET_ORDER] = json.encodeToString(order) }
     }
 
     val widgetSizes: Flow<Map<String, WidgetSize>> = context.dataStore.data.map { prefs ->

@@ -1,6 +1,6 @@
 package com.zenith.launcher.data.model
-
 import kotlinx.serialization.Serializable
+
 
 /**
  * A quick-access shortcut to a study PDF. [uriString] stores a Storage-Access-Framework

@@ -1,6 +1,6 @@
 package com.zenith.launcher.service
-
 import android.app.admin.DeviceAdminReceiver
+
 
 /**
  * A launcher can't lock the screen directly - [android.app.admin.DevicePolicyManager.lockNow]

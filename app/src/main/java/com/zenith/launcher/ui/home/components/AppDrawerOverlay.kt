@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.home.components
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -37,10 +36,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,6 +54,7 @@ import com.zenith.launcher.data.model.AppCategory
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.displayName
+
 
 /**
  * The app drawer: every installed app, in its own dedicated full-screen area rather than mixed

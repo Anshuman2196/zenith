@@ -1,7 +1,7 @@
 package com.zenith.launcher
-
 import android.app.Application
 import com.zenith.launcher.di.AppContainer
+
 
 /** Custom Application class - owns the single [AppContainer] instance for the process lifetime. */
 class ZenithApplication : Application() {

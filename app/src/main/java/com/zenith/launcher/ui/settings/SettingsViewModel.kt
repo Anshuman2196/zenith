@@ -1,11 +1,9 @@
 package com.zenith.launcher.ui.settings
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zenith.launcher.data.model.AttentionProtectionMode
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.data.model.BackgroundSettings
-import com.zenith.launcher.data.model.DeadlineSettings
 import com.zenith.launcher.data.model.FontChoice
 import com.zenith.launcher.data.model.IconPackInfo
 import com.zenith.launcher.data.model.WidgetVisibility
@@ -15,13 +13,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
 
 /** Full settings snapshot backing every section of [SettingsScreen]. */
 data class SettingsUiState(
     val profileName: String = "",
-    val deadlineSettings: DeadlineSettings = DeadlineSettings(),
     val isDarkMode: Boolean = true,
     val fontChoice: FontChoice = FontChoice.DEFAULT,
     val availableIconPacks: List<IconPackInfo> = emptyList(),
@@ -67,8 +66,8 @@ class SettingsViewModel(
         viewModelScope.launch { _installedApps.value = appRepository.getInstalledApps() }
     }
 
-    val uiState: StateFlow<SettingsUiState> = settingsRepository.profileName.combine(settingsRepository.deadlineSettings) { profileName, deadlines ->
-        SettingsUiState(profileName = profileName, deadlineSettings = deadlines)
+    val uiState: StateFlow<SettingsUiState> = settingsRepository.profileName.map { profileName ->
+        SettingsUiState(profileName = profileName)
     }.combine(isDarkMode) { state, darkMode -> state.copy(isDarkMode = darkMode) }
         .combine(fontChoice) { state, font -> state.copy(fontChoice = font) }
         .combine(_iconPacks) { state, packs -> state.copy(availableIconPacks = packs) }
@@ -90,9 +89,6 @@ class SettingsViewModel(
 
     // ---------- Profile ----------
     fun updateProfileName(name: String) = viewModelScope.launch { settingsRepository.setProfileName(name) }
-
-    // ---------- Deadline dates ----------
-    fun setDeadlineSettings(settings: DeadlineSettings) = viewModelScope.launch { settingsRepository.setDeadlineSettings(settings) }
 
     // ---------- Theme ----------
     fun setDarkMode(enabled: Boolean) = viewModelScope.launch { settingsRepository.setDarkMode(enabled) }

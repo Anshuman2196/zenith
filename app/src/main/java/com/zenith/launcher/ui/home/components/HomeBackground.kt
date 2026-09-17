@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.home.components
-
 import android.net.Uri
 import android.app.WallpaperManager
 import androidx.compose.foundation.Image
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.util.BitmapUtils
 import androidx.core.graphics.drawable.toBitmap
+
 
 /**
  * Paints the chosen photo (cropped to fill) or solid color behind everything else - shared by

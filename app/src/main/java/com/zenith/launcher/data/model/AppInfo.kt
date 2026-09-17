@@ -1,7 +1,7 @@
 package com.zenith.launcher.data.model
-
 import android.content.pm.ApplicationInfo
 import android.graphics.drawable.Drawable
+
 
 /**
  * Represents one installed app shown in Zenith's app grid.

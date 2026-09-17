@@ -1,5 +1,4 @@
 package com.zenith.launcher.util
-
 import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
@@ -7,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+
 
 /**
  * Being set as the default launcher used to mean walking the user to Settings > Apps > Default

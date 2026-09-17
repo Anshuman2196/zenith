@@ -1,5 +1,4 @@
 package com.zenith.launcher.data.repository
-
 import com.zenith.launcher.data.local.PreferencesManager
 import com.zenith.launcher.data.model.AttentionProtectionMode
 import com.zenith.launcher.data.model.AppShortcutRef
@@ -13,6 +12,7 @@ import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetVisibility
 import com.zenith.launcher.data.model.WidgetSize
 import kotlinx.coroutines.flow.Flow
+
 
 /**
  * Thin repository facade over [PreferencesManager] for everything except installed apps.
@@ -46,6 +46,8 @@ class SettingsRepository(private val prefs: PreferencesManager) {
 
     val widgetColumns: Flow<List<List<String>>> = prefs.widgetColumns
     suspend fun setWidgetColumns(columns: List<List<String>>) = prefs.setWidgetColumns(columns)
+    val phoneWidgetOrder: Flow<List<String>> = prefs.phoneWidgetOrder
+    suspend fun setPhoneWidgetOrder(order: List<String>) = prefs.setPhoneWidgetOrder(order)
     val widgetSizes: Flow<Map<String, WidgetSize>> = prefs.widgetSizes
     suspend fun setWidgetSize(id: String, size: WidgetSize) = prefs.setWidgetSize(id, size)
     val widgetHeights: Flow<Map<String, Int>> = prefs.widgetHeights
@@ -76,7 +78,6 @@ class SettingsRepository(private val prefs: PreferencesManager) {
 
     val syncLockScreenWallpaper: Flow<Boolean> = prefs.syncLockScreenWallpaper
     suspend fun setSyncLockScreenWallpaper(enabled: Boolean) = prefs.setSyncLockScreenWallpaper(enabled)
-
 
     val studyTargets: Flow<List<StudyTarget>> = prefs.studyTargets
     suspend fun setStudyTargets(targets: List<StudyTarget>) = prefs.setStudyTargets(targets)

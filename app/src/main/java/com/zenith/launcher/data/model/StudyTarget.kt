@@ -1,7 +1,7 @@
 package com.zenith.launcher.data.model
-
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
+
 
 /**
  * One self-set study target, shown in the "Targets"

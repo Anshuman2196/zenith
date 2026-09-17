@@ -1,6 +1,6 @@
 package com.zenith.launcher.data.model
-
 import kotlinx.serialization.Serializable
+
 
 /** Vertical size presets for Home widgets; retained independently of their grid position. */
 @Serializable

@@ -1,7 +1,7 @@
 package com.zenith.launcher.data.model
-
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
+
 
 /**
  * How urgently a backlog item needs attention - drives both its color-coding and its sort

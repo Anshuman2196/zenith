@@ -1,6 +1,6 @@
 package com.zenith.launcher.ui.theme
-
 import androidx.compose.ui.graphics.Color
+
 
 // Calm, low-saturation palette - minimizes visual "noise" on the home screen.
 val CalmBlue80 = Color(0xFFF2F2F2)

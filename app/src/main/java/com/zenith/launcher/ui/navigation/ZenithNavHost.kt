@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.navigation
-
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -10,6 +9,7 @@ import com.zenith.launcher.ui.home.HomeScreen
 import com.zenith.launcher.ui.home.HomeViewModel
 import com.zenith.launcher.ui.settings.SettingsScreen
 import com.zenith.launcher.ui.settings.SettingsViewModel
+
 
 object ZenithRoutes {
     const val HOME = "home"

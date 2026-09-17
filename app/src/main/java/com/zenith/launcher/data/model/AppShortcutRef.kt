@@ -1,6 +1,6 @@
 package com.zenith.launcher.data.model
-
 import kotlinx.serialization.Serializable
+
 
 /**
  * A stable reference to one app pinned to the Home screen's "App Shortcuts" widget. Only the

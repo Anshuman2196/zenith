@@ -1,5 +1,4 @@
 package com.zenith.launcher
-
 import android.os.Bundle
 import android.os.Build
 import android.Manifest
@@ -10,7 +9,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zenith.launcher.ui.ViewModelFactory
 import com.zenith.launcher.ui.navigation.ZenithNavHost
@@ -18,6 +16,7 @@ import com.zenith.launcher.ui.onboarding.OnboardingScreen
 import com.zenith.launcher.ui.settings.SettingsViewModel
 import com.zenith.launcher.ui.theme.ZenithStudyHelperTheme
 import com.zenith.launcher.util.DefaultHomeHelper
+
 
 /**
  * Single-activity entry point. Because this app is registered as HOME (see manifest), the

@@ -1,7 +1,7 @@
 package com.zenith.launcher.data.model
-
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
+
 
 /**
  * One deadline the user is tracking - fully user-defined (name + target date). [dateMillis] is epoch millis UTC midnight of that date (matches

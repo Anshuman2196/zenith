@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.home
-
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zenith.launcher.data.model.AttentionProtectionMode
@@ -10,6 +9,7 @@ import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.BacklogItem
 import com.zenith.launcher.data.model.BacklogUrgency
 import com.zenith.launcher.data.model.DeadlineSettings
+import com.zenith.launcher.data.model.DeadlineTarget
 import com.zenith.launcher.data.model.StudyTarget
 import com.zenith.launcher.data.model.LibraryLink
 import com.zenith.launcher.data.model.TodoItem
@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.util.UUID
 
+
 /** Everything the Home screen needs, combined into a single immutable snapshot. */
 data class HomeUiState(
     val greeting: String = "",
@@ -38,6 +39,7 @@ data class HomeUiState(
     val widgetVisibility: WidgetVisibility = WidgetVisibility(),
     /** The Home screen's 3-column grid arrangement - each entry is one column's ordered ids. */
     val widgetColumns: List<List<String>> = emptyList(),
+    val phoneWidgetOrder: List<String> = emptyList(),
     val widgetSizes: Map<String, WidgetSize> = emptyMap(),
     val widgetHeights: Map<String, Int> = emptyMap(),
     val deadlineCountdowns: List<DeadlineCountdown> = emptyList(),
@@ -117,6 +119,7 @@ class HomeViewModel(
             BackgroundSettings(), emptyList(), emptyList(), emptyMap(), emptyList(), false, AttentionProtectionMode.STRONG)
     }.combine(settingsRepository.widgetVisibility) { base, visibility -> base.copy(visibility = visibility) }
         .combine(settingsRepository.widgetColumns) { base, columns -> base.copy(columns = columns) }
+        .combine(settingsRepository.phoneWidgetOrder) { base, order -> base.copy(phoneWidgetOrder = order) }
         .combine(settingsRepository.widgetSizes) { base, sizes -> base.copy(sizes = sizes) }
         .combine(settingsRepository.widgetHeights) { base, heights -> base.copy(heights = heights) }
         .combine(settingsRepository.focusModeActive) { base, active -> base.copy(focusActive = active) }
@@ -164,7 +167,7 @@ class HomeViewModel(
         val visibleApps = if (base.focusActive) apps.filter { it.packageName in base.focusAllowedApps } else apps
         val resolvedShortcuts = base.appShortcutRefs.mapNotNull { ref -> apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName } }
         HomeUiState(
-            greeting = buildGreeting(base.name), apps = visibleApps, widgetVisibility = base.visibility, widgetColumns = base.columns, widgetSizes = base.sizes, widgetHeights = base.heights,
+            greeting = buildGreeting(base.name), apps = visibleApps, widgetVisibility = base.visibility, widgetColumns = base.columns, phoneWidgetOrder = base.phoneWidgetOrder, widgetSizes = base.sizes, widgetHeights = base.heights,
             deadlineCountdowns = base.deadlineSettings.deadlines.map { deadline ->
                 DeadlineCountdown(deadline.id, deadline.name, deadline.dateMillis?.let { DeadlineCountdownUtil.daysRemaining(it) })
             },
@@ -233,6 +236,16 @@ class HomeViewModel(
      * reorder within one column and a drag across columns - both are just "remove, then insert
      * elsewhere" on the same column list.
      */
+    /** Reorders the phone's single-column layout without changing the tablet three-column layout. */
+    fun movePhoneWidget(id: String, toIndex: Int) {
+        val current = uiState.value.phoneWidgetOrder.toMutableList()
+        val fromIndex = current.indexOf(id)
+        if (fromIndex == -1) return
+        current.removeAt(fromIndex)
+        current.add(toIndex.coerceIn(0, current.size), id)
+        viewModelScope.launch { settingsRepository.setPhoneWidgetOrder(current) }
+    }
+
     fun moveWidget(id: String, toColumn: Int, toIndex: Int) {
         val current = uiState.value.widgetColumns.map { it.toMutableList() }.toMutableList()
         if (toColumn !in current.indices) return
@@ -256,7 +269,6 @@ class HomeViewModel(
         val legacyHeight = (uiState.value.widgetSizes[id] ?: WidgetSize.STANDARD).minHeightDp
         settingsRepository.setWidgetHeight(id, (uiState.value.widgetHeights[id] ?: legacyHeight) + deltaDp)
     }
-
 
     /**
      * Automatic drawer categorisation. It combines app labels/package names with Android's
@@ -368,6 +380,11 @@ class HomeViewModel(
         settingsRepository.setTodoList(updated)
     }
 
+    fun updateTodo(item: TodoItem) = viewModelScope.launch {
+        if (item.text.isBlank()) return@launch
+        settingsRepository.setTodoList(uiState.value.todoItems.map { if (it.id == item.id) item.copy(text = item.text.trim()) else it })
+    }
+
     fun toggleTodo(id: String) = viewModelScope.launch {
         val updated = uiState.value.todoItems.map { if (it.id == id) it.copy(isDone = !it.isDone) else it }
         settingsRepository.setTodoList(updated)
@@ -377,11 +394,25 @@ class HomeViewModel(
         settingsRepository.setTodoList(uiState.value.todoItems.filterNot { it.id == id })
     }
 
+    // ---------- Deadlines ----------
+    fun addDeadline(name: String, dateMillis: Long?) = viewModelScope.launch {
+        if (name.isBlank()) return@launch
+        val item = DeadlineTarget(id = UUID.randomUUID().toString(), name = name.trim(), dateMillis = dateMillis)
+        // Re-read the persisted list so the operation remains safe if another surface changed it.
+        val deadlines = settingsRepository.deadlineSettings.first().deadlines + item
+        settingsRepository.setDeadlineSettings(DeadlineSettings(deadlines))
+    }
+
     // ---------- Backlog ----------
     fun addBacklogItem(subject: String, itemName: String, urgency: BacklogUrgency) = viewModelScope.launch {
         if (itemName.isBlank()) return@launch
         val item = BacklogItem(id = UUID.randomUUID().toString(), subject = subject, itemName = itemName.trim(), urgency = urgency)
         settingsRepository.setBacklogList(uiState.value.backlogItems + item)
+    }
+
+    fun updateBacklogItem(item: BacklogItem) = viewModelScope.launch {
+        if (item.itemName.isBlank()) return@launch
+        settingsRepository.setBacklogList(uiState.value.backlogItems.map { if (it.id == item.id) item.copy(itemName = item.itemName.trim(), subject = item.subject.trim().ifBlank { "General" }) else it })
     }
 
     fun deleteBacklogItem(id: String) = viewModelScope.launch {
@@ -413,7 +444,6 @@ class HomeViewModel(
     fun deleteStudyTarget(id: String) = viewModelScope.launch {
         settingsRepository.setStudyTargets(uiState.value.studyTargets.filterNot { it.id == id })
     }
-
 
     // ---------- App shortcuts ----------
     fun addAppShortcut(app: AppInfo) = viewModelScope.launch {

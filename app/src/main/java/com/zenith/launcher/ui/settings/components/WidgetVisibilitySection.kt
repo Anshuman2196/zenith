@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.settings.components
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.zenith.launcher.data.model.WidgetVisibility
+
 
 /** Widget Visibility Manager: individual ON/OFF toggle for every home-screen widget. */
 @Composable

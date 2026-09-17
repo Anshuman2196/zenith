@@ -1,5 +1,4 @@
 package com.zenith.launcher.util
-
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -27,6 +26,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.coroutines.resume
+
 
 /** A single current-conditions reading for the Home screen header's weather row. */
 data class WeatherInfo(val temperatureCelsius: Double, val weatherCode: Int)

@@ -1,10 +1,10 @@
 package com.zenith.launcher.util
-
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
+
 
 /**
  * Resolves themed icons from a third-party icon pack (e.g. Lawnicons, Whicons, or packs

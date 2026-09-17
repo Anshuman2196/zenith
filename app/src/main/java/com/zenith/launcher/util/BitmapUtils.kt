@@ -1,9 +1,9 @@
 package com.zenith.launcher.util
-
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+
 
 /**
  * A user's background photo is very often a full camera-resolution image (12MP+ - tens of

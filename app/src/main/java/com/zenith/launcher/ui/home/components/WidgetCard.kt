@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.home.components
-
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -13,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalConfiguration
+
 
 /**
  * Shared visual wrapper for every home-screen widget - a translucent, rounded glass-like card
@@ -36,6 +37,7 @@ fun WidgetCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.(
     // cranking the container opacity way up.
     val containerAlpha = if (isDarkSurface) 0.55f else 0.62f
 
+    val phone = LocalConfiguration.current.screenWidthDp < 600
     Card(
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
@@ -48,6 +50,6 @@ fun WidgetCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier.fillMaxSize()
     ) {
-        Column(modifier = Modifier.padding(16.dp), content = content)
+        Column(modifier = Modifier.padding(if (phone) 13.dp else 16.dp), content = content)
     }
 }

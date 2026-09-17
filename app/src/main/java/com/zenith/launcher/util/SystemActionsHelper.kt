@@ -1,5 +1,4 @@
 package com.zenith.launcher.util
-
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -11,6 +10,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.zenith.launcher.data.model.AttentionProtectionMode
 import com.zenith.launcher.service.ZenithDeviceAdminReceiver
+
 
 /**
  * Double-tap-to-lock is the one system action this launcher needs that has no direct API - a

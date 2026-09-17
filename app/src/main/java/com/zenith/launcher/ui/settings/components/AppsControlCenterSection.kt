@@ -1,14 +1,12 @@
 package com.zenith.launcher.ui.settings.components
-
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import com.zenith.launcher.data.model.AppInfo
+
 
 /** A focused Apps control centre that separates Focus Mode permissions from drawer organisation. */
 @Composable

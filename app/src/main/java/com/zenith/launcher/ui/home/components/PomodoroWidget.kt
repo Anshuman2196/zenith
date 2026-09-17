@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.home.components
-
 import android.media.ToneGenerator
 import android.media.AudioManager
 import androidx.compose.foundation.layout.Arrangement
@@ -18,11 +17,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.zenith.launcher.ui.home.ZenithCopy
 import com.zenith.launcher.util.StudyTimerScheduler
 import kotlinx.coroutines.delay
+
 
 private enum class PomodoroPhase(val label: String) { STUDY("Focus"), SHORT_BREAK("Short break"), LONG_BREAK("Long break") }
 
@@ -223,4 +221,3 @@ private fun PomodoroSection(
         }
     }
 }
-

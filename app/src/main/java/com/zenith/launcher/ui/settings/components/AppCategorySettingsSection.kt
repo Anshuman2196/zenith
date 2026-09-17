@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.settings.components
-
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,10 +22,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +36,7 @@ import androidx.core.graphics.drawable.toBitmap
 import com.zenith.launcher.data.model.AppCategory
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.data.model.displayName
+
 
 /**
  * Settings section for App Drawer categorization: pick a category (Study / Games / Social /

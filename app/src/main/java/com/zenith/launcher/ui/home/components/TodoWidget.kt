@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.home.components
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,13 +23,15 @@ import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.ui.home.ZenithCopy
 
+
 /** Widget 3: Todo - a quick checklist for the day's study goals. */
 @Composable
 fun TodoWidget(
     items: List<TodoItem>,
     onAddClick: () -> Unit,
     onToggle: (String) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    onEdit: (TodoItem) -> Unit
 ) {
     WidgetCard {
         WidgetHeaderRow(title = "Todo", onAddClick = onAddClick)
@@ -67,6 +69,14 @@ fun TodoWidget(
                                     MaterialTheme.colorScheme.onSurface
                                 },
                                 modifier = Modifier.padding(end = 4.dp)
+                            )
+                        }
+                        IconButton(onClick = { onEdit(item) }, modifier = Modifier.size(36.dp)) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Edit task",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                         IconButton(onClick = { onDelete(item.id) }, modifier = Modifier.size(36.dp)) {

@@ -1,9 +1,9 @@
 package com.zenith.launcher.di
-
 import android.content.Context
 import com.zenith.launcher.data.local.PreferencesManager
 import com.zenith.launcher.data.repository.AppRepository
 import com.zenith.launcher.data.repository.SettingsRepository
+
 
 /**
  * Minimal manual DI container (no Hilt/Dagger, to keep Gradle/CI simple). Created once in

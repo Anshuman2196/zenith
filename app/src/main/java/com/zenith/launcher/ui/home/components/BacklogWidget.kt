@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.home.components
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +29,7 @@ import com.zenith.launcher.ui.theme.AccentDanger
 import com.zenith.launcher.ui.theme.AccentWarning
 import com.zenith.launcher.ui.home.ZenithCopy
 
+
 /**
  * Widget 4: Backlog List - pending topics, revision topics, and weak areas, each tagged
  * with an urgency (Low/Medium/High). Higher-urgency items sort to the top of the list, so the
@@ -38,7 +39,8 @@ import com.zenith.launcher.ui.home.ZenithCopy
 fun BacklogWidget(
     items: List<BacklogItem>,
     onAddClick: () -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    onEdit: (BacklogItem) -> Unit
 ) {
     WidgetCard {
         WidgetHeaderRow(title = "Backlog", onAddClick = onAddClick)
@@ -79,6 +81,14 @@ fun BacklogWidget(
                         }
                         // Deliberately understated - a full-strength destructive icon here would
                         // outweigh the actual topic text it sits next to in a dense list.
+                        IconButton(onClick = { onEdit(item) }, modifier = Modifier.size(36.dp)) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Edit backlog item",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                         IconButton(onClick = { onDelete(item.id) }, modifier = Modifier.size(36.dp)) {
                             Icon(
                                 Icons.Default.DeleteOutline,

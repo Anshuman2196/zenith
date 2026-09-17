@@ -1,5 +1,4 @@
 package com.zenith.launcher.ui.home.components
-
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -25,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.data.model.LibraryLink
 import com.zenith.launcher.ui.home.ZenithCopy
+
 
 /** Widget 5: Library - one-tap shortcuts to notes, papers, formula sheets. */
 @Composable
