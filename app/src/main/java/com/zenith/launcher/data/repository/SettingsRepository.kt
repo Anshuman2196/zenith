@@ -6,6 +6,7 @@ import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.BacklogItem
 import com.zenith.launcher.data.model.DeadlineSettings
 import com.zenith.launcher.data.model.FontChoice
+import com.zenith.launcher.data.model.ClockSize
 import com.zenith.launcher.data.model.StudyTarget
 import com.zenith.launcher.data.model.LibraryLink
 import com.zenith.launcher.data.model.TodoItem
@@ -34,6 +35,9 @@ class SettingsRepository(private val prefs: PreferencesManager) {
 
     val fontChoice: Flow<FontChoice> = prefs.fontChoice
     suspend fun setFontChoice(choice: FontChoice) = prefs.setFontChoice(choice)
+
+    val clockSize: Flow<ClockSize> = prefs.clockSize
+    suspend fun setClockSize(size: ClockSize) = prefs.setClockSize(size)
 
     val customFontPath: Flow<String?> = prefs.customFontPath
     suspend fun setCustomFontPath(path: String?) = prefs.setCustomFontPath(path)

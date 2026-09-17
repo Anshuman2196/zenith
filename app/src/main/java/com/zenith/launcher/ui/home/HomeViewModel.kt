@@ -15,6 +15,7 @@ import com.zenith.launcher.data.model.LibraryLink
 import com.zenith.launcher.data.model.TodoItem
 import com.zenith.launcher.data.model.WidgetVisibility
 import com.zenith.launcher.data.model.WidgetSize
+import com.zenith.launcher.data.model.ClockSize
 import com.zenith.launcher.data.model.displayName
 import com.zenith.launcher.data.repository.AppRepository
 import com.zenith.launcher.data.repository.SettingsRepository
@@ -60,7 +61,8 @@ data class HomeUiState(
     val distractionPauseApp: AppInfo? = null,
     val distractionPauseSeconds: Int = 0,
     val distractionPauseMessage: String = "",
-    val attentionProtectionMode: AttentionProtectionMode = AttentionProtectionMode.STRONG
+    val attentionProtectionMode: AttentionProtectionMode = AttentionProtectionMode.STRONG,
+    val clockSize: ClockSize = ClockSize.LARGE
 )
 
 /** One deadline's live countdown, derived from the user-managed deadline date. */
@@ -112,12 +114,13 @@ class HomeViewModel(
         val appCategories: Map<String, String>,
         val appCategoryTypes: List<String>,
         val lockOnDoubleTap: Boolean,
-        val attentionProtectionMode: AttentionProtectionMode
+        val attentionProtectionMode: AttentionProtectionMode,
+        val clockSize: ClockSize
     )
 
     private val baseState = settingsRepository.profileName.combine(settingsRepository.deadlineSettings) { name, deadlineSettings ->
         BaseSettings(name, deadlineSettings, WidgetVisibility(), emptyList(), emptyList(), emptyMap(), emptyMap(), false, emptySet(), emptySet(),
-            BackgroundSettings(), emptyList(), emptyList(), emptyMap(), emptyList(), false, AttentionProtectionMode.STRONG)
+            BackgroundSettings(), emptyList(), emptyList(), emptyMap(), emptyList(), false, AttentionProtectionMode.STRONG, ClockSize.LARGE)
     }.combine(settingsRepository.widgetVisibility) { base, visibility -> base.copy(visibility = visibility) }
         .combine(settingsRepository.widgetColumns) { base, columns -> base.copy(columns = columns) }
         .combine(settingsRepository.phoneWidgetOrder) { base, order -> base.copy(phoneWidgetOrder = order) }
@@ -133,6 +136,7 @@ class HomeViewModel(
         .combine(settingsRepository.appCategoryTypes) { base, types -> base.copy(appCategoryTypes = types) }
         .combine(settingsRepository.lockOnDoubleTap) { base, enabled -> base.copy(lockOnDoubleTap = enabled) }
         .combine(settingsRepository.attentionProtectionMode) { base, mode -> base.copy(attentionProtectionMode = mode) }
+        .combine(settingsRepository.clockSize) { base, size -> base.copy(clockSize = size) }
 
     private data class HomeContent(
         val base: BaseSettings,
@@ -169,6 +173,7 @@ class HomeViewModel(
         val resolvedShortcuts = base.appShortcutRefs.mapNotNull { ref -> apps.find { it.packageName == ref.packageName && it.activityClassName == ref.activityClassName } }
         HomeUiState(
             greeting = buildGreeting(base.name), apps = visibleApps, widgetVisibility = base.visibility, widgetColumns = base.columns, phoneWidgetOrder = base.phoneWidgetOrder, widgetSizes = base.sizes, widgetHeights = base.heights,
+            clockSize = base.clockSize,
             deadlineCountdowns = base.deadlineSettings.deadlines.map { deadline ->
                 DeadlineCountdown(deadline.id, deadline.name, deadline.dateMillis?.let { DeadlineCountdownUtil.daysRemaining(it) })
             },
@@ -181,10 +186,10 @@ class HomeViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 
-    /** Chooses a fresh greeting; copy without a placeholder stays naturally impersonal. */
+    /** Chooses a fresh greeting when the profile name changes. */
     private fun buildGreeting(name: String): String {
-        val greeting = ZenithCopy.greetings.random()
-        return if (greeting.contains("%s")) greeting.format(name) else greeting
+        val dayOfYear = LocalDate.now().dayOfYear
+        return ZenithCopy.greetings.random().format(name)
     }
 
     fun launchApp(app: AppInfo) {

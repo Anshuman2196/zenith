@@ -54,6 +54,7 @@ class PreferencesManager(private val context: Context) {
         val DEADLINE_SETTINGS = stringPreferencesKey("exam_settings_json")
         val DARK_MODE = booleanPreferencesKey("dark_mode")
         val FONT_CHOICE = stringPreferencesKey("font_choice")
+        val CLOCK_SIZE = stringPreferencesKey("clock_size")
         val CUSTOM_FONT_PATH = stringPreferencesKey("custom_font_path")
         val ICON_PACK_PACKAGE = stringPreferencesKey("icon_pack_package")
         val WIDGET_VISIBILITY = stringPreferencesKey("widget_visibility_json")
@@ -125,6 +126,14 @@ class PreferencesManager(private val context: Context) {
 
     suspend fun setFontChoice(choice: FontChoice) {
         context.dataStore.edit { it[Keys.FONT_CHOICE] = choice.name }
+    }
+
+    // Default large preserves the established Zenith header appearance.
+    val clockSize: Flow<com.zenith.launcher.data.model.ClockSize> =
+        context.dataStore.data.map { com.zenith.launcher.data.model.ClockSize.fromStorageValue(it[Keys.CLOCK_SIZE]) }
+
+    suspend fun setClockSize(size: com.zenith.launcher.data.model.ClockSize) {
+        context.dataStore.edit { it[Keys.CLOCK_SIZE] = size.name }
     }
 
     /** Absolute path in app-internal storage to a user-imported font file. */

@@ -54,6 +54,7 @@ import com.zenith.launcher.ui.settings.components.AttentionProtectionSection
 import com.zenith.launcher.ui.settings.components.BackgroundSettingsSection
 import com.zenith.launcher.ui.settings.components.DeadlinesSettingsSection
 import com.zenith.launcher.ui.settings.components.FontSettingsSection
+import com.zenith.launcher.ui.settings.components.ClockSizeSettingsSection
 import com.zenith.launcher.ui.settings.components.GesturesSettingsSection
 import com.zenith.launcher.ui.settings.components.IconPackPickerSection
 import com.zenith.launcher.ui.settings.components.ProfileSettingsSection
@@ -235,6 +236,7 @@ private fun SettingsDetail(
             SettingsCategory.APPEARANCE -> {
                 item { ThemeToggleSection(isDarkMode = state.isDarkMode, onToggle = viewModel::setDarkMode) }
                 item { FontSettingsSection(selected = state.fontChoice, customFontPath = customFontPath, onSelect = viewModel::setFontChoice, onImportFont = viewModel::setCustomFontPath) }
+                item { ClockSizeSettingsSection(selected = state.clockSize, onSelect = viewModel::setClockSize) }
                 item { IconPackPickerSection(availablePacks = state.availableIconPacks, selectedPackage = state.selectedIconPack, onSelect = viewModel::selectIconPack) }
                 item { BackgroundSettingsSection(background = state.background, syncLockScreenWallpaper = state.syncLockScreenWallpaper, onPickImage = viewModel::setBackgroundImage, onPickColor = viewModel::setBackgroundColor, onReset = viewModel::resetBackground, onSyncLockScreenWallpaperChange = viewModel::setSyncLockScreenWallpaper) }
             }

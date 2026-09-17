@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.zenith.launcher.util.SystemActionsHelper
+import com.zenith.launcher.data.model.ClockSize
 import com.zenith.launcher.util.WeatherHelper
 import com.zenith.launcher.util.WeatherInfo
 import kotlin.math.roundToInt
@@ -67,6 +68,7 @@ fun GreetingHeader(
     overPhotoBackground: Boolean = false,
     lockOnDoubleTap: Boolean = false,
     settingsEnabled: Boolean = true,
+    clockSize: ClockSize = ClockSize.LARGE,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -101,7 +103,7 @@ fun GreetingHeader(
                 .fillMaxWidth()
                 // Reserves roughly the width of the (now-larger) clock + gear group on the right
                 // so a long greeting phrase truncates with an ellipsis instead of drawing under it.
-                .padding(start = 86.dp, end = 100.dp)
+                .padding(start = 86.dp, end = 132.dp)
         )
 
         Row(
@@ -109,7 +111,7 @@ fun GreetingHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            InlineClock(timeColor = textColor, dateColor = secondaryTextColor)
+            InlineClock(timeColor = textColor, dateColor = secondaryTextColor, size = clockSize)
             IconButton(onClick = onSettingsClick, enabled = settingsEnabled) {
                 Icon(
                     imageVector = Icons.Default.Settings,
@@ -122,7 +124,7 @@ fun GreetingHeader(
 }
 
 @Composable
-private fun InlineClock(timeColor: Color, dateColor: Color) {
+private fun InlineClock(timeColor: Color, dateColor: Color, size: ClockSize) {
     var now by remember { mutableStateOf(LocalDateTime.now()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -134,12 +136,19 @@ private fun InlineClock(timeColor: Color, dateColor: Color) {
     Column(horizontalAlignment = Alignment.End) {
         Text(
             text = now.format(DateTimeFormatter.ofPattern("h:mm a")),
-            style = MaterialTheme.typography.labelLarge,
+            style = when (size) {
+                ClockSize.SMALL -> MaterialTheme.typography.labelLarge
+                ClockSize.MEDIUM -> MaterialTheme.typography.headlineSmall
+                ClockSize.LARGE -> MaterialTheme.typography.displaySmall
+            },
             color = timeColor
         )
         Text(
             text = now.format(DateTimeFormatter.ofPattern("dd MMM")),
-            style = MaterialTheme.typography.labelSmall,
+            style = when (size) {
+                ClockSize.SMALL -> MaterialTheme.typography.labelSmall
+                ClockSize.MEDIUM, ClockSize.LARGE -> MaterialTheme.typography.bodyMedium
+            },
             color = dateColor
         )
     }

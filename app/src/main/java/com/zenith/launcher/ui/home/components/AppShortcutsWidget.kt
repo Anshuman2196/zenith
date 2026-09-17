@@ -71,22 +71,12 @@ fun AppShortcutsWidget(
         if (pinnedApps.isEmpty()) {
             Text(ZenithCopy.emptyShortcuts.random(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
-            // Keep the original shortcut presentation: six apps per row, fixed-size icons,
-            // and let additional rows grow the widget downward instead of hiding shortcuts.
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                pinnedApps.chunked(6).forEach { rowApps ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        rowApps.forEach { app ->
-                            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.TopCenter) {
-                                ShortcutIcon(app) { onLaunch(app) }
-                            }
-                        }
-                        repeat(6 - rowApps.size) { Spacer(Modifier.weight(1f)) }
-                    }
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 150.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                items(pinnedApps, key = { it.packageName + it.activityClassName }) { app ->
+                    ShortcutRow(app) { onLaunch(app) }
                 }
             }
         }
@@ -105,23 +95,18 @@ fun AppShortcutsWidget(
 }
 
 @Composable
-private fun ShortcutIcon(app: AppInfo, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+private fun ShortcutRow(app: AppInfo, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
             bitmap = remember(app.packageName, app.activityClassName) { app.icon.toBitmap().asImageBitmap() },
             contentDescription = app.label,
-            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
+            modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp))
         )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            app.label,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        Spacer(Modifier.width(10.dp))
+        Text(app.label, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

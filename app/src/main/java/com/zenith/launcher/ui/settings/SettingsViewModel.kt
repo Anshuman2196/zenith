@@ -8,6 +8,7 @@ import com.zenith.launcher.data.model.DeadlineSettings
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.FontChoice
+import com.zenith.launcher.data.model.ClockSize
 import com.zenith.launcher.data.model.IconPackInfo
 import com.zenith.launcher.data.model.WidgetVisibility
 import com.zenith.launcher.data.repository.AppRepository
@@ -26,6 +27,7 @@ data class SettingsUiState(
     val profileName: String = "",
     val isDarkMode: Boolean = true,
     val fontChoice: FontChoice = FontChoice.DEFAULT,
+    val clockSize: ClockSize = ClockSize.LARGE,
     val availableIconPacks: List<IconPackInfo> = emptyList(),
     val selectedIconPack: String? = null,
     val widgetVisibility: WidgetVisibility = WidgetVisibility(),
@@ -74,6 +76,7 @@ class SettingsViewModel(
         SettingsUiState(profileName = profileName)
     }.combine(isDarkMode) { state, darkMode -> state.copy(isDarkMode = darkMode) }
         .combine(fontChoice) { state, font -> state.copy(fontChoice = font) }
+        .combine(settingsRepository.clockSize) { state, size -> state.copy(clockSize = size) }
         .combine(_iconPacks) { state, packs -> state.copy(availableIconPacks = packs) }
         .combine(settingsRepository.iconPackPackage) { state, pack -> state.copy(selectedIconPack = pack) }
         .combine(settingsRepository.widgetVisibility) { state, visibility -> state.copy(widgetVisibility = visibility) }
@@ -100,6 +103,7 @@ class SettingsViewModel(
 
     // ---------- Font ----------
     fun setFontChoice(choice: FontChoice) = viewModelScope.launch { settingsRepository.setFontChoice(choice) }
+    fun setClockSize(size: ClockSize) = viewModelScope.launch { settingsRepository.setClockSize(size) }
     fun setCustomFontPath(path: String?) = viewModelScope.launch { settingsRepository.setCustomFontPath(path) }
 
     // ---------- Icon pack ----------
