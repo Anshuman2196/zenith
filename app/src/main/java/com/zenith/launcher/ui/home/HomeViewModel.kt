@@ -100,6 +100,7 @@ class HomeViewModel(
         val deadlineSettings: DeadlineSettings,
         val visibility: WidgetVisibility,
         val columns: List<List<String>>,
+        val phoneWidgetOrder: List<String>,
         val sizes: Map<String, WidgetSize>,
         val heights: Map<String, Int>,
         val focusActive: Boolean,
@@ -115,7 +116,7 @@ class HomeViewModel(
     )
 
     private val baseState = settingsRepository.profileName.combine(settingsRepository.deadlineSettings) { name, deadlineSettings ->
-        BaseSettings(name, deadlineSettings, WidgetVisibility(), emptyList(), emptyMap(), emptyMap(), false, emptySet(), emptySet(),
+        BaseSettings(name, deadlineSettings, WidgetVisibility(), emptyList(), emptyList(), emptyMap(), emptyMap(), false, emptySet(), emptySet(),
             BackgroundSettings(), emptyList(), emptyList(), emptyMap(), emptyList(), false, AttentionProtectionMode.STRONG)
     }.combine(settingsRepository.widgetVisibility) { base, visibility -> base.copy(visibility = visibility) }
         .combine(settingsRepository.widgetColumns) { base, columns -> base.copy(columns = columns) }

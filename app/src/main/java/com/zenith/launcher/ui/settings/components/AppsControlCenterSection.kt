@@ -1,4 +1,6 @@
 package com.zenith.launcher.ui.settings.components
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text

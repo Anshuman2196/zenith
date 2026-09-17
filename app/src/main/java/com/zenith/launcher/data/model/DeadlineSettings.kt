@@ -1,4 +1,5 @@
 package com.zenith.launcher.data.model
+import androidx.compose.runtime.getValue
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
 

@@ -55,7 +55,7 @@ object GitHubUpdateManager {
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun checkForUpdate(): UpdateCheckResult = withContext(Dispatchers.IO) {
-        val connection = (URL(LATEST_RELEASE_URL).openConnection() as HttpURLConnection).apply {
+        val connection = (URL(RELEASES_URL).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 10_000
             readTimeout = 15_000

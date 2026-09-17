@@ -1,4 +1,5 @@
 package com.zenith.launcher.ui.home.components
+import androidx.compose.runtime.getValue
 import android.net.Uri
 import android.app.WallpaperManager
 import androidx.compose.foundation.Image

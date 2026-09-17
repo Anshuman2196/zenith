@@ -1,4 +1,5 @@
 package com.zenith.launcher.data.model
+import androidx.compose.runtime.getValue
 
 /**
  * The type faces the user can pick for the whole launcher UI from Settings > Font. Kept as a

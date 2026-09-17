@@ -1,4 +1,5 @@
 package com.zenith.launcher.ui.settings
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zenith.launcher.data.model.AttentionProtectionMode

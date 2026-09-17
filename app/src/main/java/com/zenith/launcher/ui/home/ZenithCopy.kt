@@ -1,4 +1,5 @@
 package com.zenith.launcher.ui.home
+import androidx.compose.runtime.getValue
 
 /**
  * Centralized user-facing language. Keep UI copy here so Zenith can evolve its tone, add

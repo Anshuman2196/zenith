@@ -1,4 +1,6 @@
 package com.zenith.launcher.ui.home
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -387,7 +389,10 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                         state = state,
                         viewModel = viewModel,
                         onShowAddTodo = {},
+                        onEditTodo = {},
                         onShowAddBacklog = {},
+                        onEditBacklog = {},
+                        onShowAddDeadline = {},
                         onShowAddLibrary = {},
                         onFocusToggle = {},
                         onPomodoroRunningChanged = {}
