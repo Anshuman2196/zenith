@@ -3,9 +3,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
@@ -33,7 +30,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.key
@@ -45,15 +41,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import com.zenith.launcher.data.model.WidgetIds
 import com.zenith.launcher.ui.home.components.AddBacklogDialog
 import com.zenith.launcher.ui.home.components.AddDeadlineDialog
@@ -69,7 +61,6 @@ import com.zenith.launcher.ui.home.components.gridDragToReorder
 import com.zenith.launcher.ui.home.components.rememberGridDragDropState
 import com.zenith.launcher.ui.home.components.reportColumnBounds
 import com.zenith.launcher.util.SystemActionsHelper
-import kotlinx.coroutines.launch
 
 
 /** How many columns the widget grid lays widgets out into - matches the reference design. */
@@ -157,33 +148,11 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
         else viewModel.moveWidget(id, toColumn, toIndex)
     }
 
-    // A launcher's onResume fires both on a cold "go to Home" and - if this was the last
-    // foreground app before the phone locked - the moment the user unlocks again, so replaying
-    // a quick fade + scale-in here on every resume covers "widgets loading in after unlock"
-    // without needing to hook into ACTION_USER_PRESENT separately.
-    var resumeTrigger by remember { mutableStateOf(0) }
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                resumeTrigger++
-                // Package install/uninstall and system app-info screens return Home through this
-                // path; refreshing here makes the drawer, shortcuts and icon pack resolve at
-                // once instead of retaining a stale process-local list.
-                viewModel.loadApps()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-    val contentAlpha = remember { Animatable(0f) }
-    val contentScale = remember { Animatable(0.96f) }
-    LaunchedEffect(resumeTrigger) {
-        contentAlpha.snapTo(0f)
-        contentScale.snapTo(0.96f)
-        launch { contentAlpha.animateTo(1f, tween(420)) }
-        launch { contentScale.animateTo(1f, tween(420, easing = FastOutSlowInEasing)) }
-    }
+    // App data is refreshed once when Home is first composed. Do not use ON_RESUME here:
+    // Android calls it when the user presses the Home button too, which would replay the
+    // entrance animation and make the header visibly change every time.
+    LaunchedEffect(Unit) { viewModel.loadApps() }
+    val entranceTrigger = 1
 
     // System back closes the app drawer if it's open, otherwise exits widget-rearranging mode if
     // that's active - both take priority over the launcher's normal "swallow back" behaviour.
@@ -199,11 +168,6 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .graphicsLayer {
-                    alpha = contentAlpha.value
-                    scaleX = contentScale.value
-                    scaleY = contentScale.value
-                }
                 // Attach this to the full Home surface rather than only the header. Child
                 // widgets keep their own gestures; a double tap on any unused Home space locks.
                 .then(
@@ -271,7 +235,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                 id = id, state = state, viewModel = viewModel, dragState = dragState,
                                 resizePreviewDelta = resizePreviewDelta,
                                 onResizePreview = { delta -> resizePreviewDelta = resizePreviewDelta + (id to delta) },
-                                entranceTrigger = resumeTrigger,
+                                entranceTrigger = entranceTrigger,
                                 entranceIndex = visibleColumns.firstOrNull()?.indexOf(id) ?: 0,
                                 onResizeEnd = { totalDelta ->
                                     if (totalDelta != 0) viewModel.adjustWidgetHeight(id, totalDelta)
@@ -314,10 +278,17 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                     val isDragging = dragState.isDragging(id)
                                     val isLockedByPomodoro = isPomodoroRunning && id !in POMODORO_ACCESSIBLE_WIDGETS
                                     val baseHeight = state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160
-                                    val minimumHeight = if (id == WidgetIds.DEADLINES) 188 else 88
-                                    val displayedHeight = (baseHeight + (resizePreviewDelta[id] ?: 0)).coerceIn(minimumHeight, 600)
+                                    val contentMinimumHeight = if (id == WidgetIds.DEADLINES) {
+                                        188
+                                    } else if (id == WidgetIds.APP_SHORTCUTS) {
+                                        appShortcutsMinimumHeight(state.appShortcuts.size)
+                                    } else {
+                                        88
+                                    }
+                                    val displayedHeight = (maxOf(baseHeight, contentMinimumHeight) + (resizePreviewDelta[id] ?: 0))
+                                        .coerceIn(contentMinimumHeight, 600)
                                     WidgetEntrance(
-                                        entranceTrigger = resumeTrigger,
+                                        entranceTrigger = entranceTrigger,
                                         entranceIndex = columnIndex * 3 + (visibleColumns.getOrNull(columnIndex)?.indexOf(id) ?: 0)
                                     ) {
                                     Box(

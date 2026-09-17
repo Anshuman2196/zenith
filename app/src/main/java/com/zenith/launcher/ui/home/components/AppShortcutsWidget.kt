@@ -37,12 +37,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.ui.home.ZenithCopy
 
 /** Pinned apps with explicit management instead of destructive long-press removal. */
+private const val SHORTCUTS_PER_ROW = 6
+
 @Composable
 fun AppShortcutsWidget(
     pinnedApps: List<AppInfo>,
@@ -71,12 +74,22 @@ fun AppShortcutsWidget(
         if (pinnedApps.isEmpty()) {
             Text(ZenithCopy.emptyShortcuts.random(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
-            LazyColumn(
-                modifier = Modifier.heightIn(max = 150.dp),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-                items(pinnedApps, key = { it.packageName + it.activityClassName }) { app ->
-                    ShortcutRow(app) { onLaunch(app) }
+            // Keep the original shortcut visual size and use six shortcuts per row.
+            // The Home container derives its minimum height from this same row count, so
+            // additional shortcuts create real rows instead of being clipped or scrolling
+            // inside a tiny fixed-height area.
+            val rows = pinnedApps.chunked(SHORTCUTS_PER_ROW)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                rows.forEach { rowApps ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        rowApps.forEach { app ->
+                            ShortcutIcon(app = app, onClick = { onLaunch(app) })
+                        }
+                    }
                 }
             }
         }
@@ -95,18 +108,27 @@ fun AppShortcutsWidget(
 }
 
 @Composable
-private fun ShortcutRow(app: AppInfo, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 3.dp),
-        verticalAlignment = Alignment.CenterVertically
+private fun ShortcutIcon(app: AppInfo, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(50.dp)
     ) {
         Image(
             bitmap = remember(app.packageName, app.activityClassName) { app.icon.toBitmap().asImageBitmap() },
             contentDescription = app.label,
-            modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp))
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .clickable(onClick = onClick)
         )
-        Spacer(Modifier.width(10.dp))
-        Text(app.label, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            app.label,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
     }
 }
 

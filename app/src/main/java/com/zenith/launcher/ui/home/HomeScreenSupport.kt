@@ -75,8 +75,15 @@ internal fun PhoneWidgetItem(
     onPomodoroPauseChanged: (Boolean, Int, String) -> Unit
 ) {
     val baseHeight = state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: 160
-    val minimumHeight = if (id == WidgetIds.DEADLINES) 188 else 96
-    val displayedHeight = (baseHeight + (resizePreviewDelta[id] ?: 0)).coerceIn(minimumHeight, 600)
+    val contentMinimumHeight = if (id == WidgetIds.DEADLINES) {
+        188
+    } else if (id == WidgetIds.APP_SHORTCUTS) {
+        appShortcutsMinimumHeight(state.appShortcuts.size)
+    } else {
+        96
+    }
+    val displayedHeight = (maxOf(baseHeight, contentMinimumHeight) + (resizePreviewDelta[id] ?: 0))
+        .coerceIn(contentMinimumHeight, 600)
     val isDragging = dragState.isDragging(id)
     WidgetEntrance(entranceTrigger = entranceTrigger, entranceIndex = entranceIndex) {
         Box(
@@ -424,6 +431,14 @@ internal fun EditModeDonePill(visible: Boolean, onDone: () -> Unit, modifier: Mo
 }
 
 /** Whether widget [id] is currently toggled on in Settings > Widgets. */
+internal fun appShortcutsMinimumHeight(appCount: Int): Int {
+    if (appCount <= 0) return 88
+    val rows = (appCount + 5) / 6
+    // 132dp is the established one-row widget height; each additional row adds the
+    // fixed 48dp icon + label footprint and row spacing without changing icon size.
+    return (132 + (rows - 1) * 72).coerceAtMost(600)
+}
+
 internal fun isWidgetEnabled(id: String, visibility: com.zenith.launcher.data.model.WidgetVisibility): Boolean = when (id) {
     WidgetIds.DEADLINES -> visibility.deadlinesEnabled
     WidgetIds.FOCUS_MODE -> visibility.focusModeEnabled
