@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -70,6 +71,7 @@ fun GreetingHeader(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val largeClock = LocalConfiguration.current.screenWidthDp >= 600
     val textColor = if (overPhotoBackground) Color.White else MaterialTheme.colorScheme.onBackground
     val secondaryTextColor = if (overPhotoBackground) Color.White.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant
     val textShadow = if (overPhotoBackground) {
@@ -109,7 +111,11 @@ fun GreetingHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            InlineClock(timeColor = textColor, dateColor = secondaryTextColor)
+            InlineClock(
+                timeColor = textColor,
+                dateColor = secondaryTextColor,
+                large = largeClock
+            )
             IconButton(onClick = onSettingsClick, enabled = settingsEnabled) {
                 Icon(
                     imageVector = Icons.Default.Settings,
@@ -122,7 +128,7 @@ fun GreetingHeader(
 }
 
 @Composable
-private fun InlineClock(timeColor: Color, dateColor: Color) {
+private fun InlineClock(timeColor: Color, dateColor: Color, large: Boolean) {
     var now by remember { mutableStateOf(LocalDateTime.now()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -134,12 +140,12 @@ private fun InlineClock(timeColor: Color, dateColor: Color) {
     Column(horizontalAlignment = Alignment.End) {
         Text(
             text = now.format(DateTimeFormatter.ofPattern("h:mm a")),
-            style = MaterialTheme.typography.labelLarge,
+            style = if (large) MaterialTheme.typography.displaySmall else MaterialTheme.typography.labelLarge,
             color = timeColor
         )
         Text(
             text = now.format(DateTimeFormatter.ofPattern("dd MMM")),
-            style = MaterialTheme.typography.labelSmall,
+            style = if (large) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.labelSmall,
             color = dateColor
         )
     }

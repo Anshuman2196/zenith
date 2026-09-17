@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.zenith.launcher.ui.home.HomeScreen
 import com.zenith.launcher.ui.home.HomeViewModel
+import com.zenith.launcher.ui.onboarding.OnboardingScreen
 import com.zenith.launcher.ui.settings.SettingsScreen
 import com.zenith.launcher.ui.settings.SettingsViewModel
 
@@ -14,6 +15,7 @@ import com.zenith.launcher.ui.settings.SettingsViewModel
 object ZenithRoutes {
     const val HOME = "home"
     const val SETTINGS = "settings"
+    const val ONBOARDING_PREVIEW = "onboarding_preview"
 }
 
 @Composable
@@ -32,7 +34,15 @@ fun ZenithNavHost(viewModelFactory: ViewModelProvider.Factory) {
             val settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
             SettingsScreen(
                 viewModel = settingsViewModel,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onPreviewOnboarding = { navController.navigate(ZenithRoutes.ONBOARDING_PREVIEW) }
+            )
+        }
+        composable(ZenithRoutes.ONBOARDING_PREVIEW) {
+            val settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
+            OnboardingScreen(
+                settingsViewModel = settingsViewModel,
+                onFinished = { navController.popBackStack() }
             )
         }
     }

@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.os.Build
 import android.Manifest
 import androidx.activity.ComponentActivity
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,11 +35,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        // A home-screen launcher should never be "backed out of" - swallow system back here.
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() { /* intentionally no-op */ }
-        })
 
         val container = (application as ZenithApplication).container
         val factory = ViewModelFactory(container)

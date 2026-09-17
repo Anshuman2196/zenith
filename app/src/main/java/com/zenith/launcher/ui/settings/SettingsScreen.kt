@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -69,7 +70,7 @@ private enum class SettingsCategory(val title: String, val subtitle: String, val
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
+fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onPreviewOnboarding: () -> Unit = {}) {
     val state by viewModel.uiState.collectAsState()
     var selectedCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     val customFontPath by viewModel.customFontPath.collectAsState()
@@ -92,7 +93,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
             SettingsHome(
                 modifier = Modifier.padding(padding),
                 profileName = state.profileName,
-                onSelect = { selectedCategory = it }
+                onSelect = { selectedCategory = it },
+                onPreviewOnboarding = onPreviewOnboarding
             )
         } else {
             SettingsDetail(
@@ -110,7 +112,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
 private fun SettingsHome(
     modifier: Modifier = Modifier,
     profileName: String,
-    onSelect: (SettingsCategory) -> Unit
+    onSelect: (SettingsCategory) -> Unit,
+    onPreviewOnboarding: () -> Unit
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -147,6 +150,29 @@ private fun SettingsHome(
         }
         item {
             Text("Customize", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
+        }
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Onboarding preview", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Temporarily walk through the introduction again without resetting your onboarding status.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Button(onClick = onPreviewOnboarding) { Text("Check") }
+                }
+            }
         }
         items(SettingsCategory.entries) { category -> SettingsCategoryCard(category, onClick = { onSelect(category) }) }
         item {
