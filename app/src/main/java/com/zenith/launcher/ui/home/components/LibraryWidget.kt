@@ -39,7 +39,7 @@ fun LibraryWidget(
         WidgetHeaderRow(title = "Library", onAddClick = onAddClick)
 
         if (links.isEmpty()) {
-            EmptyHint(ZenithCopy.emptyLibrary[java.time.LocalDate.now().dayOfYear % ZenithCopy.emptyLibrary.size])
+            EmptyHint(ZenithCopy.emptyLibrary.random())
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 links.forEach { link ->

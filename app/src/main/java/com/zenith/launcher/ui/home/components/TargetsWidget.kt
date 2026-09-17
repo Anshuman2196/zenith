@@ -46,7 +46,7 @@ fun TargetsWidget(
         WidgetHeaderRow(title = "Targets", onAddClick = onAdd)
 
         if (targets.isEmpty()) {
-            EmptyHint(ZenithCopy.emptyTargets[java.time.LocalDate.now().dayOfYear % ZenithCopy.emptyTargets.size])
+            EmptyHint(ZenithCopy.emptyTargets.random())
         } else {
             LazyColumn(
                 modifier = Modifier

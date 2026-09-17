@@ -38,7 +38,7 @@ fun TodoWidget(
         WidgetHeaderRow(title = "Todo", onAddClick = onAddClick)
 
         if (items.isEmpty()) {
-            EmptyHint(ZenithCopy.emptyTasks[java.time.LocalDate.now().dayOfYear % ZenithCopy.emptyTasks.size])
+            EmptyHint(ZenithCopy.emptyTasks.random())
         } else {
             LazyColumn(
                 modifier = Modifier

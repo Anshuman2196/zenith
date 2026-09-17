@@ -146,7 +146,7 @@ private fun PomodoroSection(
             isRunning = false
             stopPauseSeconds = 7
             stopPauseKind = 2
-            stopPauseMessage = ZenithCopy.pomodoroComplete[completedFocusSessions % ZenithCopy.pomodoroComplete.size]
+            stopPauseMessage = ZenithCopy.pomodoroComplete.random()
         }
     }
 
@@ -183,7 +183,7 @@ private fun PomodoroSection(
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Text(phase.label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         Text(formatSeconds(secondsLeft), style = MaterialTheme.typography.headlineMedium)
-        if (awaitingNextPhase) Text(ZenithCopy.pomodoroTransition[completedFocusSessions % ZenithCopy.pomodoroTransition.size], style = MaterialTheme.typography.labelSmall)
+        if (awaitingNextPhase) Text(ZenithCopy.pomodoroTransition.random(), style = MaterialTheme.typography.labelSmall)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             FilledTonalButton(
@@ -203,7 +203,7 @@ private fun PomodoroSection(
                         isRunning = false
                         stopPauseSeconds = 7
                         stopPauseKind = 1
-                        stopPauseMessage = ZenithCopy.pomodoroStop[completedFocusSessions % ZenithCopy.pomodoroStop.size]
+                        stopPauseMessage = ZenithCopy.pomodoroStop.random()
                     } else {
                         awaitingNextPhase = false
                         phase = PomodoroPhase.STUDY

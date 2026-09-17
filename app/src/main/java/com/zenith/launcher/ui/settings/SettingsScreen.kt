@@ -22,13 +22,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Widgets
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import com.zenith.launcher.ui.home.components.AddDeadlineDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -50,17 +51,20 @@ import androidx.compose.ui.unit.dp
 import com.zenith.launcher.ui.settings.components.AppsControlCenterSection
 import com.zenith.launcher.ui.settings.components.AttentionProtectionSection
 import com.zenith.launcher.ui.settings.components.BackgroundSettingsSection
+import com.zenith.launcher.ui.settings.components.DeadlinesSettingsSection
 import com.zenith.launcher.ui.settings.components.FontSettingsSection
 import com.zenith.launcher.ui.settings.components.GesturesSettingsSection
 import com.zenith.launcher.ui.settings.components.IconPackPickerSection
 import com.zenith.launcher.ui.settings.components.ProfileSettingsSection
 import com.zenith.launcher.ui.settings.components.ThemeToggleSection
 import com.zenith.launcher.ui.settings.components.WidgetVisibilitySection
+import com.zenith.launcher.ui.onboarding.OnboardingScreen
 import com.zenith.launcher.ui.settings.components.UpdatesSettingsSection
 
 
 private enum class SettingsCategory(val title: String, val subtitle: String, val icon: ImageVector) {
     PROFILE("Profile", "Name and personal details", Icons.Default.Person),
+    DEADLINES("Deadlines", "Dates and upcoming milestones", Icons.Default.CalendarMonth),
     APPEARANCE("Appearance", "Theme, type, icons and wallpaper", Icons.Default.Palette),
     WIDGETS("Home layout", "Choose and arrange what you see", Icons.Default.Widgets),
     GESTURES("Gestures & attention", "Navigation and attention protection", Icons.Default.SwipeRight),
@@ -70,12 +74,15 @@ private enum class SettingsCategory(val title: String, val subtitle: String, val
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onPreviewOnboarding: () -> Unit = {}) {
+fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
     val state by viewModel.uiState.collectAsState()
     var selectedCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     val customFontPath by viewModel.customFontPath.collectAsState()
+    var showAddDeadline by remember { mutableStateOf(false) }
+    var previewOnboarding by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = selectedCategory != null) { selectedCategory = null }
+    BackHandler(enabled = previewOnboarding) { previewOnboarding = false }
+    BackHandler(enabled = !previewOnboarding && selectedCategory != null) { selectedCategory = null }
 
     Scaffold(
         topBar = {
@@ -89,12 +96,17 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onPreviewOn
             )
         }
     ) { padding ->
-        if (selectedCategory == null) {
+        if (previewOnboarding) {
+            OnboardingScreen(
+                settingsViewModel = viewModel,
+                onFinished = { previewOnboarding = false }
+            )
+        } else if (selectedCategory == null) {
             SettingsHome(
                 modifier = Modifier.padding(padding),
                 profileName = state.profileName,
                 onSelect = { selectedCategory = it },
-                onPreviewOnboarding = onPreviewOnboarding
+                onPreviewOnboarding = { previewOnboarding = true }
             )
         } else {
             SettingsDetail(
@@ -102,9 +114,14 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onPreviewOn
                 state = state,
                 customFontPath = customFontPath,
                 viewModel = viewModel,
+                onAddDeadline = { showAddDeadline = true },
                 modifier = Modifier.padding(padding)
             )
         }
+    }
+
+    if (showAddDeadline) {
+        AddDeadlineDialog(onDismiss = { showAddDeadline = false }, onConfirm = { name, date -> viewModel.addDeadline(name, date); showAddDeadline = false })
     }
 }
 
@@ -152,37 +169,17 @@ private fun SettingsHome(
             Text("Customize", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
         }
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
+            Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
                         Text("Onboarding preview", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Temporarily walk through the introduction again without resetting your onboarding status.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text("Walk through Zenith's introduction again without resetting your setup.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Button(onClick = onPreviewOnboarding) { Text("Check") }
+                    TextButton(onClick = onPreviewOnboarding) { Text("Check") }
                 }
             }
         }
         items(SettingsCategory.entries) { category -> SettingsCategoryCard(category, onClick = { onSelect(category) }) }
-        item {
-            Text(
-                "Deadlines, Todo and Backlog are managed directly from their Home widgets.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-        }
     }
 }
 
@@ -220,6 +217,7 @@ private fun SettingsDetail(
     state: SettingsUiState,
     customFontPath: String?,
     viewModel: SettingsViewModel,
+    onAddDeadline: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -232,6 +230,7 @@ private fun SettingsDetail(
         }
         when (category) {
             SettingsCategory.PROFILE -> item { ProfileSettingsSection(currentName = state.profileName, onSave = viewModel::updateProfileName) }
+            SettingsCategory.DEADLINES -> item { DeadlinesSettingsSection(deadlines = state.deadlines, onAdd = onAddDeadline, onDelete = viewModel::deleteDeadline) }
             SettingsCategory.APPEARANCE -> {
                 item { ThemeToggleSection(isDarkMode = state.isDarkMode, onToggle = viewModel::setDarkMode) }
                 item { FontSettingsSection(selected = state.fontChoice, customFontPath = customFontPath, onSelect = viewModel::setFontChoice, onImportFont = viewModel::setCustomFontPath) }

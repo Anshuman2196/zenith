@@ -1,8 +1,22 @@
 package com.zenith.launcher.ui.onboarding
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,26 +31,33 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.DragHandle
+import androidx.compose.material.icons.outlined.FilterAlt
+import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.PauseCircleOutline
 import androidx.compose.material.icons.outlined.School
-import androidx.compose.material.icons.outlined.SwapVert
+import androidx.compose.material.icons.outlined.Swipe
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -44,333 +65,533 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.data.model.WidgetVisibility
 import com.zenith.launcher.ui.settings.SettingsViewModel
 
-
-private enum class OnboardingStep {
-    WELCOME, AWARENESS, FOCUS, DISTRACTIONS, HOME, WIDGETS, NAME
+private enum class OnboardingStep(val eyebrow: String, val title: String) {
+    WELCOME("WELCOME TO ZENITH", "Your home screen, with a little more intention."),
+    NOTICE("THE IDEA", "Catch the moment before it becomes automatic."),
+    FOCUS("FOCUS", "Decide what gets to stay close."),
+    PAUSE("PAUSES", "Choose where Zenith should slow things down."),
+    HOME("YOUR SPACE", "Put the useful things where you can see them."),
+    PERSONALIZE("MAKE IT YOURS", "A few choices, then you're in."),
+    NAME("ALMOST THERE", "What should we call you?")
 }
 
 private val steps = OnboardingStep.entries
 
 @Composable
 fun OnboardingScreen(settingsViewModel: SettingsViewModel, onFinished: () -> Unit) {
-    var stepIndex by remember { mutableIntStateOf(0) }
+    var index by remember { mutableIntStateOf(0) }
     var name by remember { mutableStateOf("") }
-    var demoHeight by remember { mutableIntStateOf(104) }
     val state by settingsViewModel.uiState.collectAsState()
-    val step = steps[stepIndex]
-    val isLast = step == OnboardingStep.NAME
+    val step = steps[index]
 
     fun finish() {
         name.trim().takeIf { it.isNotEmpty() }?.let(settingsViewModel::updateProfileName)
         onFinished()
     }
 
-    CompositionLocalProvider(LocalContentColor provides androidx.compose.ui.graphics.Color.White) {
-        Column(
+    fun next() {
+        if (index == steps.lastIndex) finish() else index++
+    }
+
+    BackHandler(enabled = index > 0) { index-- }
+
+    CompositionLocalProvider(LocalContentColor provides Color.White) {
+        Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color(0xFF0B0B0F))
                 .navigationBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (stepIndex > 0) {
-                IconButton(onClick = { stepIndex-- }) {
-                    Icon(Icons.Outlined.ArrowBack, contentDescription = "Previous")
-                }
-            } else {
-                Spacer(Modifier.size(48.dp))
-            }
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = ::finish) { Text("Skip") }
-        }
+            OnboardingGlow(step = index)
 
-        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            when (step) {
-                OnboardingStep.WELCOME -> WelcomeStep()
-                OnboardingStep.AWARENESS -> AwarenessStep()
-                OnboardingStep.FOCUS -> AppChoiceStep(
-                    title = "Choose what Focus means to you",
-                    body = "These are the apps Zenith can keep available while Focus Mode is active. You decide what belongs in that space.",
-                    apps = state.installedApps,
-                    selected = state.focusAllowedApps,
-                    emptyText = "No apps are available yet. You can choose them later in Settings → Apps.",
-                    onToggle = settingsViewModel::toggleFocusAllowedApp
-                )
-                OnboardingStep.DISTRACTIONS -> AppChoiceStep(
-                    title = "Choose where you want a pause",
-                    body = "These apps can receive a small pause before opening during Focus Mode. They aren't bad apps — they're simply apps you've chosen to notice.",
-                    apps = state.installedApps,
-                    selected = state.distractionApps,
-                    emptyText = "No apps are available yet. You can choose them later in Settings → Apps.",
-                    onToggle = settingsViewModel::toggleDistractionApp
-                )
-                OnboardingStep.HOME -> HomeStep()
-                OnboardingStep.WIDGETS -> WidgetsStep(
-                    visibility = state.widgetVisibility,
-                    demoHeight = demoHeight,
-                    onHeightChange = { demoHeight = it },
-                    onVisibilityChange = settingsViewModel::setWidgetVisibility
-                )
-                OnboardingStep.NAME -> NameStep(name = name, onNameChange = { name = it })
-            }
-        }
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                steps.indices.forEach { index ->
-                    Box(
-                        modifier = Modifier
-                            .size(if (index == stepIndex) 22.dp else 6.dp, 6.dp)
-                            .clip(CircleShape)
-                            .background(if (index == stepIndex) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant)
-                    )
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = { if (isLast) finish() else stepIndex++ },
-                modifier = Modifier.fillMaxWidth().height(52.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 14.dp)
             ) {
-                Text(if (isLast) "Enter Zenith" else if (step == OnboardingStep.FOCUS || step == OnboardingStep.DISTRACTIONS) "Continue" else "Continue")
-                if (!isLast) {
-                    Spacer(Modifier.width(8.dp))
-                    Icon(Icons.Outlined.ArrowForward, contentDescription = null)
+                TopBar(index = index, onBack = { index-- }, onSkip = ::finish)
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .pointerInput(index) {
+                            var totalDrag = 0f
+                            detectHorizontalDragGestures(
+                                onDragStart = { totalDrag = 0f },
+                                onHorizontalDrag = { _, amount -> totalDrag += amount },
+                                onDragEnd = {
+                                    if (totalDrag < -90f && index < steps.lastIndex) index++
+                                    else if (totalDrag > 90f && index > 0) index--
+                                }
+                            )
+                        }
+                ) {
+                    AnimatedContent(
+                        targetState = step,
+                        transitionSpec = {
+                            (fadeIn(tween(220)) + slideInHorizontally(tween(280)) { it / 8 }) togetherWith
+                                (fadeOut(tween(150)) + slideOutHorizontally(tween(180)) { -it / 10 })
+                        },
+                        label = "onboarding-step"
+                    ) { current ->
+                        when (current) {
+                            OnboardingStep.WELCOME -> WelcomeStep()
+                            OnboardingStep.NOTICE -> NoticeStep()
+                            OnboardingStep.FOCUS -> AppChoiceStep(
+                                icon = Icons.Outlined.School,
+                                title = "What belongs in Focus?",
+                                body = "Pick the apps you want available when you intentionally enter Focus Mode.",
+                                apps = state.installedApps,
+                                selected = state.focusAllowedApps,
+                                emptyText = "You can choose these later from Settings → Apps.",
+                                onToggle = settingsViewModel::toggleFocusAllowedApp
+                            )
+                            OnboardingStep.PAUSE -> AppChoiceStep(
+                                icon = Icons.Outlined.PauseCircleOutline,
+                                title = "Where would a pause help?",
+                                body = "Pick apps where you want Zenith to create a short moment to notice before opening them.",
+                                apps = state.installedApps,
+                                selected = state.distractionApps,
+                                emptyText = "You can choose these later from Settings → Apps.",
+                                onToggle = settingsViewModel::toggleDistractionApp
+                            )
+                            OnboardingStep.HOME -> HomeStep(
+                                visibility = state.widgetVisibility,
+                                onVisibilityChange = settingsViewModel::setWidgetVisibility
+                            )
+                            OnboardingStep.PERSONALIZE -> PersonalizeStep()
+                            OnboardingStep.NAME -> NameStep(name = name, onNameChange = { name = it })
+                        }
+                    }
                 }
+
+                ProgressDots(index)
+                Spacer(Modifier.height(12.dp))
+                Button(
+                    onClick = ::next,
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Text(if (index == steps.lastIndex) "Enter Zenith" else buttonLabel(step))
+                    if (index != steps.lastIndex) {
+                        Spacer(Modifier.width(8.dp))
+                        Icon(Icons.Outlined.ArrowForward, contentDescription = null)
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Swipe left or right to move through the intro",
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.48f),
+                    textAlign = TextAlign.Center
+                )
             }
-        }
         }
     }
 }
 
 @Composable
-private fun StepShell(
-    eyebrow: String,
-    title: String,
-    body: String,
-    icon: @Composable () -> Unit,
-    content: @Composable () -> Unit = {}
-) {
+private fun TopBar(index: Int, onBack: () -> Unit, onSkip: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        if (index > 0) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
+            }
+        } else {
+            Spacer(Modifier.size(48.dp))
+        }
+        Spacer(Modifier.weight(1f))
+        TextButton(onClick = onSkip) { Text("Skip") }
+    }
+}
+
+@Composable
+private fun ProgressDots(index: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        steps.indices.forEach { item ->
+            val active = item == index
+            Box(
+                Modifier
+                    .padding(horizontal = 3.dp)
+                    .size(if (active) 24.dp else 6.dp, 6.dp)
+                    .clip(CircleShape)
+                    .background(if (active) Color.White else Color.White.copy(alpha = 0.25f))
+            )
+        }
+    }
+}
+
+private fun buttonLabel(step: OnboardingStep): String = when (step) {
+    OnboardingStep.WELCOME -> "Let's look around"
+    OnboardingStep.NOTICE -> "Show me"
+    OnboardingStep.FOCUS, OnboardingStep.PAUSE -> "Continue"
+    OnboardingStep.HOME -> "Shape my home"
+    OnboardingStep.PERSONALIZE -> "One last choice"
+    OnboardingStep.NAME -> "Enter Zenith"
+}
+
+@Composable
+private fun OnboardingGlow(step: Int) {
+    val transition = rememberInfiniteTransition(label = "glow")
+    val pulse by transition.animateFloat(
+        initialValue = 0.92f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(tween(2600), RepeatMode.Reverse),
+        label = "pulse"
+    )
+    Box(
+        Modifier
+            .size(260.dp)
+            .graphicsLayer(scaleX = pulse, scaleY = pulse, alpha = 0.16f)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.primary)
+            .align(Alignment.TopEnd)
+            .padding(top = (step * 2).dp)
+    )
+}
+
+@Composable
+private fun StepHeader(icon: @Composable () -> Unit, eyebrow: String, title: String, body: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .size(82.dp)
+                .clip(RoundedCornerShape(26.dp))
+                .background(Color.White.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
+        ) { icon() }
+        Spacer(Modifier.height(18.dp))
+        Text(eyebrow, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.62f))
+        Spacer(Modifier.height(8.dp))
+        Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(10.dp))
+        Text(body, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.76f), textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun WelcomeStep() {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 12.dp, bottom = 28.dp),
+        contentPadding = PaddingValues(top = 14.dp, bottom = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item {
-            Box(
-                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) { icon() }
-            Spacer(Modifier.height(20.dp))
-            Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(10.dp))
-            Text(title, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(12.dp))
-            Text(body, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(24.dp))
-            content()
+            StepHeader(
+                icon = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null, modifier = Modifier.size(38.dp)) },
+                eyebrow = OnboardingStep.WELCOME.eyebrow,
+                title = OnboardingStep.WELCOME.title,
+                body = "Zenith turns your home screen into a place to see what matters, notice what is happening, and choose what comes next."
+            )
+            Spacer(Modifier.height(28.dp))
+            InteractivePhonePreview()
+            Spacer(Modifier.height(18.dp))
+            FeatureRow(Icons.Outlined.School, "Study tools", "Targets, deadlines, backlog and Pomodoro")
+            FeatureRow(Icons.Outlined.Swipe, "Gentle friction", "Small pauses when you choose them")
+            FeatureRow(Icons.Outlined.Tune, "Your rules", "You decide what stays visible and what gets a pause")
         }
     }
 }
 
 @Composable
-private fun WelcomeStep() = StepShell(
-    eyebrow = "Welcome to Zenith",
-    title = "A different kind of home screen",
-    body = "Your phone can pull you from one thing to another. Zenith gives you a calmer place to begin — with the things you care about closer to the surface.",
-    icon = { Icon(Icons.Outlined.AutoAwesome, contentDescription = null, modifier = Modifier.size(30.dp)) }
-) {
-    InfoCard("Your home, your choices", "Zenith doesn't decide what you should do. You choose what belongs here, what Focus Mode means, and what deserves a pause.")
+private fun InteractivePhonePreview() {
+    var selected by remember { mutableIntStateOf(0) }
+    val labels = listOf("Today", "Focus", "Tasks")
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.08f))
+    ) {
+        Column(Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Zenith", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("9:41", style = MaterialTheme.typography.titleMedium)
+            }
+            Spacer(Modifier.height(14.dp))
+            Text("A little more intention.", style = MaterialTheme.typography.headlineSmall)
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                labels.forEachIndexed { index, label ->
+                    FilterChip(
+                        selected = selected == index,
+                        onClick = { selected = index },
+                        label = { Text(label) }
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            AnimatedContent(targetState = selected, label = "preview") { tab ->
+                Surface(shape = RoundedCornerShape(18.dp), color = Color.White.copy(alpha = 0.07f)) {
+                    Text(
+                        listOf("Your day at a glance.", "One thing can be enough for now.", "A clear next step is easier to see.")[tab],
+                        modifier = Modifier.fillMaxWidth().padding(18.dp),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
-private fun AwarenessStep() = StepShell(
-    eyebrow = "The idea behind Zenith",
-    title = "Notice before you move",
-    body = "Sometimes we reach for an app without really deciding to. Zenith can create a small moment between the impulse and the action — enough time to notice and choose.",
-    icon = { Icon(Icons.Outlined.Tune, contentDescription = null, modifier = Modifier.size(30.dp)) }
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        listOf("Impulse", "Notice", "Choose", "Act").forEachIndexed { index, label ->
-            Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-                Text(label, modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp), style = MaterialTheme.typography.labelLarge)
+private fun NoticeStep() {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = 14.dp, bottom = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        item {
+            StepHeader(
+                icon = { Icon(Icons.Outlined.Lightbulb, contentDescription = null, modifier = Modifier.size(38.dp)) },
+                eyebrow = OnboardingStep.NOTICE.eyebrow,
+                title = OnboardingStep.NOTICE.title,
+                body = "Zenith is not here to tell you what to do. It can simply make an automatic moment a little easier to notice."
+            )
+            Spacer(Modifier.height(28.dp))
+            AwarenessFlow()
+            Spacer(Modifier.height(18.dp))
+            QuoteCard("Impulse → Notice → Choose → Act", "The pause is the space between the first feeling and the next action.")
+        }
+    }
+}
+
+@Composable
+private fun AwarenessFlow() {
+    val transition = rememberInfiniteTransition(label = "flow")
+    val offset by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(2200), RepeatMode.Restart),
+        label = "flow-offset"
+    )
+    val items = listOf("Impulse", "Notice", "Choose", "Act")
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        items.forEachIndexed { index, item ->
+            val emphasis = if (((offset * 4f).toInt() % 4) == index) 1f else 0.62f
+            Surface(
+                modifier = Modifier.fillMaxWidth().graphicsLayer(alpha = emphasis),
+                shape = RoundedCornerShape(18.dp),
+                color = Color.White.copy(alpha = 0.08f)
+            ) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(10.dp).clip(CircleShape).background(Color.White))
+                    Spacer(Modifier.width(14.dp))
+                    Text(item, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.weight(1f))
+                    Text("0${index + 1}", color = Color.White.copy(alpha = 0.42f))
+                }
             }
-            if (index < 3) Text("↓", color = Color.White.copy(alpha = 0.72f))
         }
     }
 }
 
 @Composable
 private fun AppChoiceStep(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     body: String,
     apps: List<AppInfo>,
     selected: Set<String>,
     emptyText: String,
     onToggle: (String) -> Unit
-) = StepShell(
-    eyebrow = "Make it yours",
-    title = title,
-    body = body,
-    icon = { Icon(Icons.Outlined.School, contentDescription = null, modifier = Modifier.size(30.dp)) }
 ) {
-    if (apps.isEmpty()) {
-        InfoCard("You can do this later", emptyText)
-    } else {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = Color.White)) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    if (selected.isEmpty()) "Nothing selected yet" else "${selected.size} selected",
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                )
-                apps.sortedBy { it.label.lowercase() }.take(40).forEach { app ->
-                    val checked = app.packageName in selected
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable { onToggle(app.packageName) }.padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
+    Column(Modifier.fillMaxSize()) {
+        StepHeader(icon = { Icon(icon, contentDescription = null, modifier = Modifier.size(38.dp)) }, eyebrow = if (title.startsWith("What")) OnboardingStep.FOCUS.eyebrow else OnboardingStep.PAUSE.eyebrow, title = title, body = body)
+        Spacer(Modifier.height(18.dp))
+        if (apps.isEmpty()) {
+            QuoteCard("Nothing to pick yet", emptyText)
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    Text(
+                        "Tap to choose · ${selected.size} selected",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.55f),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+                items(apps.take(30), key = { it.packageName }) { app ->
+                    val isSelected = app.packageName in selected
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        onClick = { onToggle(app.packageName) },
+                        colors = CardDefaults.cardColors(containerColor = if (isSelected) Color.White.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.07f))
                     ) {
-                        Box(
-                            modifier = Modifier.size(38.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface),
-                            contentAlignment = Alignment.Center
-                        ) { Text(app.label.take(1).uppercase(), fontWeight = FontWeight.Bold) }
-                        Spacer(Modifier.width(12.dp))
-                        Text(app.label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                        if (checked) Icon(Icons.Outlined.Check, contentDescription = "Selected")
+                        Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.foundation.Image(bitmap = androidx.core.graphics.drawable.toBitmap(app.icon).asImageBitmap(), contentDescription = null, modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)))
+                            Spacer(Modifier.width(12.dp))
+                            Text(app.label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                            Icon(if (isSelected) Icons.Outlined.Check else Icons.Outlined.Apps, contentDescription = null, tint = if (isSelected) Color.White else Color.White.copy(alpha = 0.45f))
+                        }
                     }
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
-        Text("You can change these choices later in Settings → Apps.", style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
     }
 }
 
 @Composable
-private fun HomeStep() = StepShell(
-    eyebrow = "Your home space",
-    title = "Keep what matters close",
-    body = "Zenith is built from small pieces of information you choose to keep nearby — deadlines, study targets, your backlog, library links, Pomodoro, and more.",
-    icon = { Icon(Icons.Outlined.SwapVert, contentDescription = null, modifier = Modifier.size(30.dp)) }
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        listOf("DEADLINES", "STUDY TARGET", "BACKLOG", "POMODORO").forEachIndexed { index, label ->
-            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onSurface))
-                    Spacer(Modifier.width(12.dp))
-                    Text(label, style = MaterialTheme.typography.labelLarge)
-                    Spacer(Modifier.weight(1f))
-                    Text(if (index == 0) "12 days" else "Ready", style = MaterialTheme.typography.labelMedium)
-                }
+private fun HomeStep(visibility: WidgetVisibility, onVisibilityChange: ((WidgetVisibility) -> WidgetVisibility) -> Unit) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = 14.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        item {
+            StepHeader(
+                icon = { Icon(Icons.Outlined.Widgets, contentDescription = null, modifier = Modifier.size(38.dp)) },
+                eyebrow = OnboardingStep.HOME.eyebrow,
+                title = OnboardingStep.HOME.title,
+                body = "Zenith is made from small pieces. Turn on the ones you want, then arrange them later on your home screen."
+            )
+            Spacer(Modifier.height(22.dp))
+        }
+        item { WidgetToggle("Deadlines", "Your three nearest dates", visibility.deadlinesEnabled) { onVisibilityChange { it.copy(deadlinesEnabled = !visibility.deadlinesEnabled) } } }
+        item { WidgetToggle("Study target", "A direction, not a verdict", visibility.targetsEnabled) { onVisibilityChange { it.copy(targetsEnabled = !visibility.targetsEnabled) } } }
+        item { WidgetToggle("Pomodoro", "Work and pause in one place", visibility.pomodoroEnabled) { onVisibilityChange { it.copy(pomodoroEnabled = !visibility.pomodoroEnabled) } } }
+        item { WidgetToggle("Backlog", "Things you want out of your head", visibility.backlogEnabled) { onVisibilityChange { it.copy(backlogEnabled = !visibility.backlogEnabled) } } }
+        item { QuoteCard("Nothing is permanent", "You can hide, move and resize widgets any time from Home layout in Settings.") }
+    }
+}
+
+@Composable
+private fun WidgetToggle(label: String, subtitle: String, enabled: Boolean, onToggle: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        onClick = onToggle,
+        colors = CardDefaults.cardColors(containerColor = if (enabled) Color.White.copy(alpha = 0.13f) else Color.White.copy(alpha = 0.07f))
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(Color.White.copy(alpha = if (enabled) 0.16f else 0.07f)), contentAlignment = Alignment.Center) {
+                Icon(if (enabled) Icons.Outlined.Check else Icons.Outlined.Widgets, contentDescription = null)
             }
-        }
-    }
-}
-
-@Composable
-private fun WidgetsStep(
-    visibility: WidgetVisibility,
-    demoHeight: Int,
-    onHeightChange: (Int) -> Unit,
-    onVisibilityChange: ((WidgetVisibility) -> WidgetVisibility) -> Unit
-) = StepShell(
-    eyebrow = "Shape the space",
-    title = "Enable, hide, move, resize",
-    body = "Every widget is optional. Turn on what helps, hide what doesn't, and resize the space until it feels right. You can change everything later in Settings → Widgets.",
-    icon = { Icon(Icons.Outlined.DragHandle, contentDescription = null, modifier = Modifier.size(30.dp)) }
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = Color.White)) {
-            Column(Modifier.fillMaxWidth().padding(14.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Study target", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                    Icon(Icons.Outlined.DragHandle, contentDescription = "Resize handle")
-                }
-                Spacer(Modifier.height(8.dp))
-                Box(
-                    Modifier.fillMaxWidth().height(demoHeight.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surface),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("80 / 100", style = MaterialTheme.typography.headlineSmall)
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Drag the handle to resize", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { onHeightChange(if (demoHeight >= 184) 104 else demoHeight + 40) }) {
-                        Icon(Icons.Outlined.SwapVert, contentDescription = "Resize")
-                    }
-                }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.titleMedium)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.55f))
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            WidgetChip("Deadlines", visibility.deadlinesEnabled) { onVisibilityChange { it.copy(deadlinesEnabled = !visibility.deadlinesEnabled) } }
-            WidgetChip("Pomodoro", visibility.pomodoroEnabled) { onVisibilityChange { it.copy(pomodoroEnabled = !visibility.pomodoroEnabled) } }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            WidgetChip("Backlog", visibility.backlogEnabled) { onVisibilityChange { it.copy(backlogEnabled = !visibility.backlogEnabled) } }
-            WidgetChip("Library", visibility.libraryEnabled) { onVisibilityChange { it.copy(libraryEnabled = !visibility.libraryEnabled) } }
+            Text(if (enabled) "On" else "Off", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.65f))
         }
     }
 }
 
 @Composable
-private fun WidgetChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(selected = selected, onClick = onClick, label = { Text(label, color = Color.White) }, leadingIcon = if (selected) {
-        { Icon(Icons.Outlined.Check, contentDescription = null) }
-    } else null)
+private fun PersonalizeStep() {
+    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        StepHeader(
+            icon = { Icon(Icons.Outlined.Tune, contentDescription = null, modifier = Modifier.size(38.dp)) },
+            eyebrow = OnboardingStep.PERSONALIZE.eyebrow,
+            title = OnboardingStep.PERSONALIZE.title,
+            body = "The rest of Zenith lives in settings. You can change the look, gestures, apps, widgets and attention behavior whenever you want."
+        )
+        Spacer(Modifier.height(28.dp))
+        listOf(
+            Icons.Outlined.DarkMode to "Appearance",
+            Icons.Outlined.Widgets to "Home layout",
+            Icons.Outlined.FilterAlt to "Apps & pauses",
+            Icons.Outlined.Swipe to "Gestures & attention"
+        ).forEach { (icon, label) ->
+            FeatureRow(icon, label, "Change it later")
+        }
+        Spacer(Modifier.height(12.dp))
+        QuoteCard("You are always in charge", "Zenith is a tool for awareness, not a judge of how you spend your time.")
+    }
 }
 
 @Composable
-private fun NameStep(name: String, onNameChange: (String) -> Unit) = StepShell(
-    eyebrow = "One last thing",
-    title = "Make it a little more personal",
-    body = "What should Zenith call you? You can skip this and change it later.",
-    icon = { Icon(Icons.Outlined.AccessTime, contentDescription = null, modifier = Modifier.size(30.dp)) }
-) {
-    OutlinedTextField(
-        value = name,
-        onValueChange = onNameChange,
-        singleLine = true,
-        label = { Text("Your name", color = Color.White) },
-        placeholder = { Text("Student", color = Color.White.copy(alpha = 0.7f)) },
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White,
-            focusedBorderColor = Color.White,
-            unfocusedBorderColor = Color.White.copy(alpha = 0.55f),
-            focusedLabelColor = Color.White,
-            unfocusedLabelColor = Color.White.copy(alpha = 0.8f),
-            cursorColor = Color.White
-        ),
-        modifier = Modifier.fillMaxWidth()
-    )
+private fun NameStep(name: String, onNameChange: (String) -> Unit) {
+    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        StepHeader(
+            icon = { Icon(Icons.Outlined.AccessTime, contentDescription = null, modifier = Modifier.size(38.dp)) },
+            eyebrow = OnboardingStep.NAME.eyebrow,
+            title = OnboardingStep.NAME.title,
+            body = "This is optional. Leave it blank and Zenith will simply say Student."
+        )
+        Spacer(Modifier.height(28.dp))
+        OutlinedTextField(
+            value = name,
+            onValueChange = onNameChange,
+            singleLine = true,
+            label = { Text("Your name") },
+            placeholder = { Text("Student", color = Color.White.copy(alpha = 0.45f)) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
+                focusedLabelColor = Color.White,
+                unfocusedLabelColor = Color.White.copy(alpha = 0.65f),
+                cursorColor = Color.White
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(18.dp))
+        AnimatedVisibility(visible = name.isNotBlank(), enter = fadeIn() + scaleIn(), exit = fadeOut()) {
+            QuoteCard("Nice to meet you, ${name.trim()}", "You can change this later in Profile.")
+        }
+    }
 }
 
 @Composable
-private fun InfoCard(title: String, body: String) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = Color.White)) {
-        Column(Modifier.fillMaxWidth().padding(18.dp)) {
+private fun FeatureRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(42.dp).clip(RoundedCornerShape(13.dp)).background(Color.White.copy(alpha = 0.09f)), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(21.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.55f))
+        }
+    }
+}
+
+@Composable
+private fun QuoteCard(title: String, body: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.075f))
+    ) {
+        Column(Modifier.padding(18.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(6.dp))
-            Text(body, style = MaterialTheme.typography.bodyMedium)
+            Text(body, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.68f))
         }
     }
 }

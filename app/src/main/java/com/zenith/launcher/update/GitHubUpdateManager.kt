@@ -123,7 +123,7 @@ object GitHubUpdateManager {
                 val settingsIntent = Intent(
                     Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                     Uri.parse("package:${context.packageName}")
-                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
                 context.startActivity(settingsIntent)
                 throw InstallPermissionRequiredException()
             }
@@ -132,7 +132,6 @@ object GitHubUpdateManager {
             val installIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, APK_MIME)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(installIntent)
         }

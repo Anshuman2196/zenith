@@ -28,8 +28,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.systemGestureExclusion
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -83,7 +83,7 @@ private const val DRAWER_SWIPE_OPEN_THRESHOLD_PX = 60f
  * own outer horizontal padding (see the Row in [HomeScreen]) so the strips live entirely within
  * that visual margin and never overlap a widget's actual touch area.
  */
-private val EDGE_SWIPE_STRIP_WIDTH = 24.dp
+private val EDGE_SWIPE_STRIP_WIDTH = 32.dp
 
 /**
  * Only these widgets stay usable while a Pomodoro focus session is running - every other widget
@@ -311,7 +311,8 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                     val isDragging = dragState.isDragging(id)
                                     val isLockedByPomodoro = isPomodoroRunning && id !in POMODORO_ACCESSIBLE_WIDGETS
                                     val baseHeight = state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160
-                                    val displayedHeight = (baseHeight + (resizePreviewDelta[id] ?: 0)).coerceIn(88, 600)
+                                    val minimumHeight = if (id == WidgetIds.DEADLINES) 188 else 88
+                                    val displayedHeight = (baseHeight + (resizePreviewDelta[id] ?: 0)).coerceIn(minimumHeight, 600)
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -423,8 +424,8 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                     .align(Alignment.CenterEnd)
                     .fillMaxHeight()
                     .width(EDGE_SWIPE_STRIP_WIDTH)
-                    // Reserve only this narrow drawer-launch strip from Android's edge-back
-                    // gesture so the Home drawer swipe is actually delivered to Zenith.
+                    // Reserve this narrow strip for Zenith's drawer gesture rather than letting
+                    // Android's edge-back gesture consume the first part of the swipe.
                     .systemGestureExclusion()
                     .pointerInput(Unit) {
                         var accumulated = 0f

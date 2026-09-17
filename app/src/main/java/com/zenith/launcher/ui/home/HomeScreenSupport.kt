@@ -72,7 +72,8 @@ internal fun PhoneWidgetItem(
     onPomodoroPauseChanged: (Boolean, Int, String) -> Unit
 ) {
     val baseHeight = state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: 160
-    val displayedHeight = (baseHeight + (resizePreviewDelta[id] ?: 0)).coerceIn(96, 600)
+    val minimumHeight = if (id == WidgetIds.DEADLINES) 188 else 96
+    val displayedHeight = (baseHeight + (resizePreviewDelta[id] ?: 0)).coerceIn(minimumHeight, 600)
     val isDragging = dragState.isDragging(id)
     Box(
         modifier = Modifier
@@ -136,32 +137,13 @@ internal fun WidgetResizeGrip(
 /** A short, non-interactive reflection shown when Zenith intercepts a distraction launch. */
 @Composable
 internal fun DistractionLaunchPause(secondsLeft: Int, message: String) {
-    val rotationIndex = ((7 - secondsLeft) / 2).coerceAtMost(ZenithCopy.distractionPause.lastIndex)
-    val rotatedMessage = if (ZenithCopy.distractionPause.isNotEmpty()) {
-        ZenithCopy.distractionPause[rotationIndex]
-    } else message
-    ReflectionPauseSurface(
-        title = "Distractions",
-        secondsLeft = secondsLeft,
-        message = rotatedMessage,
-        ringSize = 190.dp
-    )
+    ReflectionPauseSurface(title = "Distractions", secondsLeft = secondsLeft, message = message, ringSize = 190.dp)
 }
 
 /** The same full-screen reflection treatment used by the other deliberate pause moments. */
 @Composable
 internal fun PomodoroReflectionPause(secondsLeft: Int, message: String) {
-    val elapsed = (7 - secondsLeft).coerceAtLeast(0)
-    val rotationIndex = (elapsed / 2).coerceAtMost(ZenithCopy.pomodoroStop.lastIndex)
-    val rotatedMessage = if (ZenithCopy.pomodoroStop.isNotEmpty()) {
-        ZenithCopy.pomodoroStop[rotationIndex]
-    } else message
-    ReflectionPauseSurface(
-        title = "Pomodoro",
-        secondsLeft = secondsLeft,
-        message = rotatedMessage,
-        ringSize = 210.dp
-    )
+    ReflectionPauseSurface(title = "Pomodoro", secondsLeft = secondsLeft, message = message, ringSize = 210.dp)
 }
 
 @Composable
@@ -225,7 +207,7 @@ internal fun ReflectionPauseSurface(
 @Composable
 internal fun FocusModeEntryPause(onFinished: () -> Unit) {
     var secondsLeft by remember { mutableStateOf(8) }
-    val messages = ZenithCopy.focusModeEntry
+    val message = remember { ZenithCopy.focusModeEntry.random() }
     val breathing = rememberInfiniteTransition(label = "focusEntryBreath")
     val ringScale by breathing.animateFloat(
         initialValue = 0.92f,
@@ -266,7 +248,7 @@ internal fun FocusModeEntryPause(onFinished: () -> Unit) {
         ) {
             Text("A moment before focus", style = MaterialTheme.typography.titleLarge, color = Color.White)
             Text(
-                messages[((8 - secondsLeft) / 4).coerceIn(0, messages.lastIndex)],
+                message,
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.9f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -287,7 +269,7 @@ internal fun FocusModeEntryPause(onFinished: () -> Unit) {
 @Composable
 internal fun FocusModeExitPause(onFinished: () -> Unit) {
     var secondsLeft by remember { mutableStateOf(18) }
-    val messages = ZenithCopy.focusExit
+    val message = remember { ZenithCopy.focusExit.random() }
     val breathing = rememberInfiniteTransition(label = "focusExitBreath")
     val ringScale by breathing.animateFloat(
         initialValue = 0.88f,
@@ -325,7 +307,7 @@ internal fun FocusModeExitPause(onFinished: () -> Unit) {
         ) {
             Text("Pause before leaving Focus Mode", style = MaterialTheme.typography.titleLarge, color = Color.White)
             Text(
-                messages[((18 - secondsLeft) / 4).coerceIn(0, messages.lastIndex)],
+                message,
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.9f),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center

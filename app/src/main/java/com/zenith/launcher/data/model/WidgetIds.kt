@@ -41,7 +41,7 @@ object WidgetIds {
      */
     /** Initial heights (dp) tuned to the reference home-screen proportions. */
     val DEFAULT_HEIGHTS: Map<String, Int> = mapOf(
-        DEADLINES to 112,
+        DEADLINES to 188,
         FOCUS_MODE to 112,
         TARGETS to 190,
         POMODORO to 430,

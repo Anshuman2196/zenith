@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.zenith.launcher.ui.home.ZenithCopy
@@ -19,6 +20,8 @@ import com.zenith.launcher.ui.home.ZenithCopy
  */
 @Composable
 fun FocusModeToggle(isActive: Boolean, onToggle: () -> Unit) {
+    val message = remember(isActive) { (if (isActive) ZenithCopy.focusMode else ZenithCopy.focusModeOff).random() }
+
     WidgetCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -28,7 +31,7 @@ fun FocusModeToggle(isActive: Boolean, onToggle: () -> Unit) {
             Column {
                 Text("Focus Mode", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = if (isActive) ZenithCopy.focusMode[0] else ZenithCopy.focusModeOff[0],
+                    text = message,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

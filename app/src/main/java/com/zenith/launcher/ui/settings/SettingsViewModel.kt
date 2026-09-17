@@ -3,6 +3,8 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zenith.launcher.data.model.AttentionProtectionMode
+import com.zenith.launcher.data.model.DeadlineTarget
+import com.zenith.launcher.data.model.DeadlineSettings
 import com.zenith.launcher.data.model.AppInfo
 import com.zenith.launcher.data.model.BackgroundSettings
 import com.zenith.launcher.data.model.FontChoice
@@ -27,6 +29,7 @@ data class SettingsUiState(
     val availableIconPacks: List<IconPackInfo> = emptyList(),
     val selectedIconPack: String? = null,
     val widgetVisibility: WidgetVisibility = WidgetVisibility(),
+    val deadlines: List<DeadlineTarget> = emptyList(),
     val installedApps: List<AppInfo> = emptyList(), // used by the Focus Mode app picker + App Categories
     val focusAllowedApps: Set<String> = emptySet(),
     val distractionApps: Set<String> = emptySet(),
@@ -74,6 +77,7 @@ class SettingsViewModel(
         .combine(_iconPacks) { state, packs -> state.copy(availableIconPacks = packs) }
         .combine(settingsRepository.iconPackPackage) { state, pack -> state.copy(selectedIconPack = pack) }
         .combine(settingsRepository.widgetVisibility) { state, visibility -> state.copy(widgetVisibility = visibility) }
+        .combine(settingsRepository.deadlineSettings) { state, deadlines -> state.copy(deadlines = deadlines.deadlines) }
         .combine(_installedApps) { state, apps -> state.copy(installedApps = apps) }
         .combine(settingsRepository.focusAllowedApps) { state, allowed -> state.copy(focusAllowedApps = allowed) }
         .combine(settingsRepository.distractionApps) { state, distractions -> state.copy(distractionApps = distractions) }
@@ -104,6 +108,16 @@ class SettingsViewModel(
     // ---------- Widget visibility ----------
     fun setWidgetVisibility(update: (WidgetVisibility) -> WidgetVisibility) = viewModelScope.launch {
         settingsRepository.setWidgetVisibility(update(uiState.value.widgetVisibility))
+    }
+
+    fun addDeadline(name: String, dateMillis: Long?) = viewModelScope.launch {
+        if (name.isBlank()) return@launch
+        val item = DeadlineTarget(java.util.UUID.randomUUID().toString(), name.trim(), dateMillis)
+        settingsRepository.setDeadlineSettings(DeadlineSettings(uiState.value.deadlines + item))
+    }
+
+    fun deleteDeadline(id: String) = viewModelScope.launch {
+        settingsRepository.setDeadlineSettings(DeadlineSettings(uiState.value.deadlines.filterNot { it.id == id }))
     }
 
     // ---------- Focus mode allow-list ----------

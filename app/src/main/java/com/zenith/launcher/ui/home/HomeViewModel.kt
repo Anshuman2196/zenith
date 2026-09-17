@@ -181,10 +181,10 @@ class HomeViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 
-    /** Rotates through a few phrases so the greeting doesn't feel static every day. */
+    /** Chooses a fresh greeting when the profile name changes. */
     private fun buildGreeting(name: String): String {
         val dayOfYear = LocalDate.now().dayOfYear
-        return ZenithCopy.greetings[dayOfYear % ZenithCopy.greetings.size].format(name)
+        return ZenithCopy.greetings.random().format(name)
     }
 
     fun launchApp(app: AppInfo) {
@@ -194,9 +194,7 @@ class HomeViewModel(
             return
         }
 
-        val message = ZenithCopy.distractionPause[
-            (app.packageName.hashCode().ushr(1) + LocalDate.now().dayOfYear) % ZenithCopy.distractionPause.size
-        ]
+        val message = ZenithCopy.distractionPause.random()
         _distractionPauseApp.value = app
         _distractionPauseSeconds.value = 7
         _distractionPauseMessage.value = message
@@ -268,7 +266,8 @@ class HomeViewModel(
 
     fun adjustWidgetHeight(id: String, deltaDp: Int) = viewModelScope.launch {
         val legacyHeight = (uiState.value.widgetSizes[id] ?: WidgetSize.STANDARD).minHeightDp
-        settingsRepository.setWidgetHeight(id, (uiState.value.widgetHeights[id] ?: legacyHeight) + deltaDp)
+        val minimum = if (id == com.zenith.launcher.data.model.WidgetIds.DEADLINES) 188 else 88
+        settingsRepository.setWidgetHeight(id, ((uiState.value.widgetHeights[id] ?: legacyHeight) + deltaDp).coerceIn(minimum, 600))
     }
 
     /**

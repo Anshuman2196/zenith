@@ -46,7 +46,7 @@ fun BacklogWidget(
         WidgetHeaderRow(title = "Backlog", onAddClick = onAddClick)
 
         if (items.isEmpty()) {
-            EmptyHint(ZenithCopy.emptyBacklog[java.time.LocalDate.now().dayOfYear % ZenithCopy.emptyBacklog.size])
+            EmptyHint(ZenithCopy.emptyBacklog.random())
         } else {
             val sorted = items.sortedByDescending { it.urgency.ordinal }
             LazyColumn(
