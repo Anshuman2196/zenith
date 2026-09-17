@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -57,6 +58,7 @@ import com.zenith.launcher.ui.home.components.TodoWidget
 import com.zenith.launcher.ui.home.components.gridDragToReorder
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 
 /** How many columns the widget grid lays widgets out into - matches the reference design. */
@@ -64,6 +66,7 @@ import kotlinx.coroutines.delay
 @Composable
 internal fun PhoneWidgetItem(
     id: String, state: HomeUiState, viewModel: HomeViewModel, dragState: GridDragDropState,
+    entranceTrigger: Int, entranceIndex: Int,
     resizePreviewDelta: Map<String, Int>, onResizePreview: (Int) -> Unit, onResizeEnd: (Int) -> Unit,
     onShowAddTodo: () -> Unit, onEditTodo: (com.zenith.launcher.data.model.TodoItem) -> Unit,
     onShowAddBacklog: () -> Unit, onEditBacklog: (com.zenith.launcher.data.model.BacklogItem) -> Unit,
@@ -75,21 +78,59 @@ internal fun PhoneWidgetItem(
     val minimumHeight = if (id == WidgetIds.DEADLINES) 188 else 96
     val displayedHeight = (baseHeight + (resizePreviewDelta[id] ?: 0)).coerceIn(minimumHeight, 600)
     val isDragging = dragState.isDragging(id)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(displayedHeight.dp)
-            .alpha(if (isDragging) 0f else 1f)
-            .gridDragToReorder(dragState, id)
-    ) {
-        WidgetForId(
-            id, state, viewModel, onShowAddTodo, onEditTodo, onShowAddBacklog, onEditBacklog,
-            onShowAddDeadline, onShowAddLibrary, onFocusToggle, onPomodoroRunningChanged,
-            onPomodoroProtectionChanged, onPomodoroPauseChanged
-        )
-        if (dragState.editMode) {
-            WidgetResizeGrip(onHeightPreview = onResizePreview, onHeightChangeEnd = onResizeEnd, modifier = Modifier.align(Alignment.BottomEnd))
+    WidgetEntrance(entranceTrigger = entranceTrigger, entranceIndex = entranceIndex) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(displayedHeight.dp)
+                .alpha(if (isDragging) 0f else 1f)
+                .gridDragToReorder(dragState, id)
+        ) {
+            WidgetForId(
+                id, state, viewModel, onShowAddTodo, onEditTodo, onShowAddBacklog, onEditBacklog,
+                onShowAddDeadline, onShowAddLibrary, onFocusToggle, onPomodoroRunningChanged,
+                onPomodoroProtectionChanged, onPomodoroPauseChanged
+            )
+            if (dragState.editMode) {
+                WidgetResizeGrip(onHeightPreview = onResizePreview, onHeightChangeEnd = onResizeEnd, modifier = Modifier.align(Alignment.BottomEnd))
+            }
         }
+    }
+}
+
+/**
+ * Reveals each widget independently after the launcher becomes visible. The small stagger keeps
+ * unlocks feeling intentional instead of making the entire home grid appear in one frame.
+ */
+@Composable
+internal fun WidgetEntrance(
+    entranceTrigger: Int,
+    entranceIndex: Int,
+    content: @Composable () -> Unit
+) {
+    val alpha = remember { Animatable(0f) }
+    val translationY = remember { Animatable(26f) }
+    val scale = remember { Animatable(0.97f) }
+
+    LaunchedEffect(entranceTrigger) {
+        alpha.snapTo(0f)
+        translationY.snapTo(26f)
+        scale.snapTo(0.97f)
+        delay((entranceIndex.coerceAtMost(7) * 65L))
+        launch { alpha.animateTo(1f, tween(320)) }
+        launch { translationY.animateTo(0f, tween(420, easing = FastOutSlowInEasing)) }
+        launch { scale.animateTo(1f, tween(420, easing = FastOutSlowInEasing)) }
+    }
+
+    Box(
+        modifier = Modifier.graphicsLayer(
+            alpha = alpha.value,
+            translationY = translationY.value,
+            scaleX = scale.value,
+            scaleY = scale.value
+        )
+    ) {
+        content()
     }
 }
 

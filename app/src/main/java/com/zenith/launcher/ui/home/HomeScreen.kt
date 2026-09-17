@@ -270,6 +270,8 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                 id = id, state = state, viewModel = viewModel, dragState = dragState,
                                 resizePreviewDelta = resizePreviewDelta,
                                 onResizePreview = { delta -> resizePreviewDelta = resizePreviewDelta + (id to delta) },
+                                entranceTrigger = resumeTrigger,
+                                entranceIndex = visibleColumns.firstOrNull()?.indexOf(id) ?: 0,
                                 onResizeEnd = { totalDelta ->
                                     if (totalDelta != 0) viewModel.adjustWidgetHeight(id, totalDelta)
                                     resizePreviewDelta = resizePreviewDelta - id
@@ -313,6 +315,10 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                     val baseHeight = state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160
                                     val minimumHeight = if (id == WidgetIds.DEADLINES) 188 else 88
                                     val displayedHeight = (baseHeight + (resizePreviewDelta[id] ?: 0)).coerceIn(minimumHeight, 600)
+                                    WidgetEntrance(
+                                        entranceTrigger = resumeTrigger,
+                                        entranceIndex = columnIndex * 3 + (visibleColumns.getOrNull(columnIndex)?.indexOf(id) ?: 0)
+                                    ) {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -378,6 +384,7 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                                 modifier = Modifier.align(Alignment.BottomEnd)
                                             )
                                         }
+                                    }
                                     }
                                 }
                             }

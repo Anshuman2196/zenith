@@ -78,6 +78,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -267,15 +268,17 @@ private fun OnboardingGlow(step: Int) {
         animationSpec = infiniteRepeatable(tween(2600), RepeatMode.Reverse),
         label = "pulse"
     )
-    Box(
-        Modifier
-            .size(260.dp)
-            .graphicsLayer(scaleX = pulse, scaleY = pulse, alpha = 0.16f)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary)
-            .align(Alignment.TopEnd)
-            .padding(top = (step * 2).dp)
-    )
+    Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier
+                .size(260.dp)
+                .graphicsLayer(scaleX = pulse, scaleY = pulse, alpha = 0.16f)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary)
+                .align(Alignment.TopEnd)
+                .padding(top = (step * 2).dp)
+        )
+    }
 }
 
 @Composable
@@ -451,7 +454,7 @@ private fun AppChoiceStep(
                         colors = CardDefaults.cardColors(containerColor = if (isSelected) Color.White.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.07f))
                     ) {
                         Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            androidx.compose.foundation.Image(bitmap = androidx.core.graphics.drawable.toBitmap(app.icon).asImageBitmap(), contentDescription = null, modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)))
+                            androidx.compose.foundation.Image(bitmap = app.icon.toBitmap().asImageBitmap(), contentDescription = null, modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)))
                             Spacer(Modifier.width(12.dp))
                             Text(app.label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
                             Icon(if (isSelected) Icons.Outlined.Check else Icons.Outlined.Apps, contentDescription = null, tint = if (isSelected) Color.White else Color.White.copy(alpha = 0.45f))
