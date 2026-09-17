@@ -101,7 +101,7 @@ fun GreetingHeader(
                 .fillMaxWidth()
                 // Reserves roughly the width of the (now-larger) clock + gear group on the right
                 // so a long greeting phrase truncates with an ellipsis instead of drawing under it.
-                .padding(start = 86.dp, end = 132.dp)
+                .padding(start = 86.dp, end = 100.dp)
         )
 
         Row(
