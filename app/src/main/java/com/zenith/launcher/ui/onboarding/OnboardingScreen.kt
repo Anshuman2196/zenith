@@ -445,7 +445,7 @@ private fun AppChoiceStep(
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
-                items(apps.take(30), key = { it.packageName }) { app ->
+                items(apps, key = { it.packageName }) { app ->
                     val isSelected = app.packageName in selected
                     Card(
                         modifier = Modifier.fillMaxWidth(),

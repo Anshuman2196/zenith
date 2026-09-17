@@ -13,14 +13,14 @@ object ZenithCopy {
         "A new day is already underway, %s.",
         "Today has not decided itself yet, %s.",
         "The next choice is still yours, %s.",
-        "You are here now, %s.",
+        "You are here now.",
         "Begin where you are, %s.",
         "Nothing needs to be solved all at once, %s.",
         "Today is not asking for perfection, %s.",
         "There is still room to begin, %s.",
         "The day is moving. You can move with it, %s.",
-        "Some things deserve your attention, %s.",
-        "Not everything requires a response, %s.",
+        "Some things deserve your attention.",
+        "Not everything requires a response.",
         "The next hour has not been spent yet, %s.",
         "Small choices become familiar paths, %s.",
         "This moment is enough to start, %s.",
@@ -36,10 +36,10 @@ object ZenithCopy {
         "Not every thought deserves your attention, %s.",
         "The day has already started. You are joining it, %s.",
         "You do not have to answer everything today, %s.",
-        "Attention is always going somewhere, %s.",
+        "Attention is always going somewhere.",
         "What you repeat becomes familiar, %s.",
-        "The next moment has not happened yet, %s.",
-        "Today is another chance to notice, %s."
+        "The next moment has not happened yet.",
+        "Today is another chance to notice."
     )
 
     val focusMode = listOf(

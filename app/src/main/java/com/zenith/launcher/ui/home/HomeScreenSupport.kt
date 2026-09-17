@@ -63,6 +63,16 @@ import kotlinx.coroutines.launch
 
 /** How many columns the widget grid lays widgets out into - matches the reference design. */
 
+/** App shortcuts use six fixed-size icons per row and grow vertically as more shortcuts are added. */
+internal fun widgetHeightForHome(id: String, state: HomeUiState, minimumHeight: Int): Int {
+    val baseHeight = state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: 160
+    if (id != WidgetIds.APP_SHORTCUTS) return (baseHeight).coerceIn(minimumHeight, 600)
+
+    val rows = ((state.appShortcuts.size + 5) / 6).coerceAtLeast(1)
+    val contentHeight = 84 + rows * 76
+    return maxOf(baseHeight, contentHeight, minimumHeight).coerceAtMost(600)
+}
+
 @Composable
 internal fun PhoneWidgetItem(
     id: String, state: HomeUiState, viewModel: HomeViewModel, dragState: GridDragDropState,
@@ -74,8 +84,8 @@ internal fun PhoneWidgetItem(
     onPomodoroRunningChanged: (Boolean) -> Unit, onPomodoroProtectionChanged: (Boolean) -> Unit,
     onPomodoroPauseChanged: (Boolean, Int, String) -> Unit
 ) {
-    val baseHeight = state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: 160
     val minimumHeight = if (id == WidgetIds.DEADLINES) 188 else 96
+    val baseHeight = widgetHeightForHome(id, state, minimumHeight)
     val displayedHeight = (baseHeight + (resizePreviewDelta[id] ?: 0)).coerceIn(minimumHeight, 600)
     val isDragging = dragState.isDragging(id)
     WidgetEntrance(entranceTrigger = entranceTrigger, entranceIndex = entranceIndex) {

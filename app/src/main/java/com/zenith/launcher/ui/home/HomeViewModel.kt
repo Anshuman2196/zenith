@@ -181,10 +181,10 @@ class HomeViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 
-    /** Chooses a fresh greeting when the profile name changes. */
+    /** Chooses a fresh greeting; copy without a placeholder stays naturally impersonal. */
     private fun buildGreeting(name: String): String {
-        val dayOfYear = LocalDate.now().dayOfYear
-        return ZenithCopy.greetings.random().format(name)
+        val greeting = ZenithCopy.greetings.random()
+        return if (greeting.contains("%s")) greeting.format(name) else greeting
     }
 
     fun launchApp(app: AppInfo) {

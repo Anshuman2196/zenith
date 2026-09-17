@@ -2,10 +2,11 @@ package com.zenith.launcher.ui.home
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.activity.compose.BackHandler
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
@@ -45,7 +46,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
@@ -69,7 +69,6 @@ import com.zenith.launcher.ui.home.components.gridDragToReorder
 import com.zenith.launcher.ui.home.components.rememberGridDragDropState
 import com.zenith.launcher.ui.home.components.reportColumnBounds
 import com.zenith.launcher.util.SystemActionsHelper
-import kotlinx.coroutines.launch
 
 
 /** How many columns the widget grid lays widgets out into - matches the reference design. */
@@ -157,32 +156,41 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
         else viewModel.moveWidget(id, toColumn, toIndex)
     }
 
-    // A launcher's onResume fires both on a cold "go to Home" and - if this was the last
-    // foreground app before the phone locked - the moment the user unlocks again, so replaying
-    // a quick fade + scale-in here on every resume covers "widgets loading in after unlock"
-    // without needing to hook into ACTION_USER_PRESENT separately.
+    // Refresh installed apps whenever Home resumes, but only replay the entrance choreography
+    // for an actual lock-screen unlock. Pressing the system Home button while Zenith is already
+    // Home must not make the header change or cause the widgets to animate again.
     var resumeTrigger by remember { mutableStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
+    DisposableEffect(lifecycleOwner, context) {
+        val lifecycleObserver = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                resumeTrigger++
                 // Package install/uninstall and system app-info screens return Home through this
-                // path; refreshing here makes the drawer, shortcuts and icon pack resolve at
-                // once instead of retaining a stale process-local list.
+                // path; refreshing here keeps the drawer and shortcuts current without replaying
+                // the unlock animation.
                 viewModel.loadApps()
             }
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-    val contentAlpha = remember { Animatable(0f) }
-    val contentScale = remember { Animatable(0.96f) }
-    LaunchedEffect(resumeTrigger) {
-        contentAlpha.snapTo(0f)
-        contentScale.snapTo(0.96f)
-        launch { contentAlpha.animateTo(1f, tween(420)) }
-        launch { contentScale.animateTo(1f, tween(420, easing = FastOutSlowInEasing)) }
+        lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+
+        val userPresentReceiver = object : BroadcastReceiver() {
+            override fun onReceive(receiverContext: android.content.Context?, intent: Intent?) {
+                if (intent?.action == Intent.ACTION_USER_PRESENT) {
+                    resumeTrigger++
+                    viewModel.loadApps()
+                }
+            }
+        }
+        ContextCompat.registerReceiver(
+            context,
+            userPresentReceiver,
+            IntentFilter(Intent.ACTION_USER_PRESENT),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
+            context.unregisterReceiver(userPresentReceiver)
+        }
     }
 
     // System back closes the app drawer if it's open, otherwise exits widget-rearranging mode if
@@ -199,11 +207,6 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .graphicsLayer {
-                    alpha = contentAlpha.value
-                    scaleX = contentScale.value
-                    scaleY = contentScale.value
-                }
                 // Attach this to the full Home surface rather than only the header. Child
                 // widgets keep their own gestures; a double tap on any unused Home space locks.
                 .then(
@@ -312,8 +315,8 @@ fun HomeScreen(viewModel: HomeViewModel, onOpenSettings: () -> Unit) {
                                 key(id) {
                                     val isDragging = dragState.isDragging(id)
                                     val isLockedByPomodoro = isPomodoroRunning && id !in POMODORO_ACCESSIBLE_WIDGETS
-                                    val baseHeight = state.widgetHeights[id] ?: WidgetIds.DEFAULT_HEIGHTS[id] ?: state.widgetSizes[id]?.minHeightDp ?: 160
                                     val minimumHeight = if (id == WidgetIds.DEADLINES) 188 else 88
+                                    val baseHeight = widgetHeightForHome(id, state, minimumHeight)
                                     val displayedHeight = (baseHeight + (resizePreviewDelta[id] ?: 0)).coerceIn(minimumHeight, 600)
                                     WidgetEntrance(
                                         entranceTrigger = resumeTrigger,
